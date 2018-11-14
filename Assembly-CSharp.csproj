@@ -64,7 +64,9 @@
     <Compile Include="Assets\Scripts\Cube.cs" />
     <Compile Include="Assets\Scripts\GenerateCube.cs" />
     <Compile Include="Assets\Scripts\GenerateIcosphere.cs" />
+    <Compile Include="Assets\Scripts\GenerateIcosphere2.cs" />
     <Compile Include="Assets\Scripts\GeneratePlane.cs" />
+    <Compile Include="Assets\Scripts\Generator.cs" />
     <Compile Include="Assets\Scripts\Player.cs" />
     <None Include="Assets\Shaders\TextureArrayShader.shader" />
     <None Include="Assets\Shaders\NewSurfaceShader.shader" />

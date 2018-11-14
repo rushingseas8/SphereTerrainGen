@@ -77,16 +77,16 @@ public class GenerateIcosphere : MonoBehaviour {
         List<Vector2> uvs = new List<Vector2> {
             new Vector2(0, 0),
             new Vector2(1, 0),
-            new Vector2(1, 1),
-            new Vector2(0, 0),
-            new Vector2(0, 1),
-            new Vector2(1, 1),
+            new Vector2(0.5f, 1),
             new Vector2(0, 0),
             new Vector2(1, 0),
-            new Vector2(1, 1),
+            new Vector2(0.5f, 1),
             new Vector2(0, 0),
-            new Vector2(0, 1),
-            new Vector2(1, 1)
+            new Vector2(1, 0),
+            new Vector2(0.5f, 1),
+            new Vector2(0, 0),
+            new Vector2(1, 0),
+            new Vector2(0.5f, 1)
         };
 
         /*
