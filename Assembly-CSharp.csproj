@@ -68,6 +68,7 @@
     <Compile Include="Assets\Scripts\GenerateIcosphere2.cs" />
     <Compile Include="Assets\Scripts\GeneratePlane.cs" />
     <Compile Include="Assets\Scripts\GenerateRhombusTerrain.cs" />
+    <Compile Include="Assets\Scripts\GenerateShape.cs" />
     <Compile Include="Assets\Scripts\Generator.cs" />
     <Compile Include="Assets\Scripts\Player.cs" />
     <None Include="Assets\Shaders\TextureArrayShader.shader" />
