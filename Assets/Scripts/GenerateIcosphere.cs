@@ -116,7 +116,7 @@ public class GenerateIcosphere : MonoBehaviour {
 
         for (int recur = 0; recur < recursionDepth; recur++) 
         {
-            Subdivide(mesh);
+            Generator.SubdivideNotShared(mesh);
         }
         vertices = new List<Vector3>(mesh.vertices);
 
