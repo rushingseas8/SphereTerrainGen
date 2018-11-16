@@ -1,4 +1,4 @@
-﻿using System.Collections;
+﻿//using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -211,49 +211,101 @@ public class GenerateShape : MonoBehaviour {
         List<Vector3> vertices = new List<Vector3>();
 
         // TODO make an icosphere with non-shared vertices.
-        vertices.Add(new Vector3(-s, t, 0));
+        vertices.Add(new Vector3(-s, t, 0)); // 0
         vertices.Add(new Vector3(s, t, 0));
         vertices.Add(new Vector3(-s, -t, 0));
         vertices.Add(new Vector3(s, -t, 0));
 
-        vertices.Add(new Vector3(0, -s, t));
+        vertices.Add(new Vector3(0, -s, t)); // 4
         vertices.Add(new Vector3(0, s, t));
         vertices.Add(new Vector3(0, -s, -t));
         vertices.Add(new Vector3(0, s, -t));
 
-        vertices.Add(new Vector3(t, 0, -s));
+        vertices.Add(new Vector3(t, 0, -s)); // 8
         vertices.Add(new Vector3(t, 0, s));
         vertices.Add(new Vector3(-t, 0, -s));
         vertices.Add(new Vector3(-t, 0, s));
 
-        List<int> triangles = new List<int>() {
-            0, 11, 5,
-            0, 5, 1,
-            0, 1, 7,
-            0, 7, 10,
-            0, 10, 11,
+        // Order: down, left, down, left
+        Vector3[] baseVertices = {
+            // Face 1: towards +x, +z
+            new Vector3(-s, t, 0),
+            new Vector3(0, s, t),
+            new Vector3(s, t, 0),
 
-            1, 5, 9,
-            5, 11, 4,
-            11, 10, 2,
-            10, 7, 6,
-            7, 1, 8,
+            new Vector3(s, t, 0),
+            new Vector3(t, 0, s), // Swap
+            new Vector3(0, s, t), // Swap
 
-            3, 9, 4,
-            3, 4, 2,
-            3, 2, 6,
-            3, 6, 8,
-            3, 8, 9,
+            new Vector3(t, 0, s),
+            new Vector3(t, 0, -s),
+            new Vector3(s, t, 0),
 
-            4, 9, 5,
-            2, 4, 11,
-            6, 2, 10,
-            8, 6, 7,
-            9, 8, 1
+            new Vector3(s, -t, 0),
+            new Vector3(t, 0, s),  // Swap
+            new Vector3(t, 0, -s), // Swap
+
+            // Face 2: towards +z (slightly towards -x)
+            new Vector3(-s, t, 0),
+            new Vector3(-t, 0, s),
+            new Vector3(0, s, t),
+
+            new Vector3(0, s, t),
+            new Vector3(0, -s, t), // Swap
+            new Vector3(-t, 0, s), // Swap
+
+            new Vector3(s, -t, 0),
+            new Vector3(t, 0, s),
+            new Vector3(0, -s, t),
+
+            new Vector3(0, -s, t),
+            new Vector3(0, s, t), // Swap
+            new Vector3(t, 0, s), // Swap
         };
+
+        List<int> triangles = new List<int>() {
+            //0, 11, 5, // 1 (face 2)
+            //0, 5, 1, // 1 (face 1)
+            //0, 1, 7,
+            //0, 7, 10,
+            //0, 10, 11,
+
+            //1, 5, 9, // 2 (face 1)
+            //5, 11, 4, // 2 (face 2)
+            //11, 10, 2,
+            //10, 7, 6,
+            //7, 1, 8,
+
+            //3, 9, 4, // 4 (face 2)
+            //3, 4, 2,
+            //3, 2, 6,
+            //3, 6, 8,
+            //3, 8, 9, // 4 (face 1)
+
+            //4, 9, 5, // 3 (face 2)
+            //2, 4, 11,
+            //6, 2, 10,
+            //8, 6, 7,
+            //9, 8, 1 // 3 (face 1)
+        };
+
+        int[] baseTriangles = new int[24];
+        for (int i = 0; i < baseTriangles.Length; i += 6)
+        {
+            baseTriangles[i + 0] = i + 0;
+            baseTriangles[i + 1] = i + 1;
+            baseTriangles[i + 2] = i + 2;
+
+            baseTriangles[i + 3] = i + 3;
+            baseTriangles[i + 4] = i + 5;
+            baseTriangles[i + 5] = i + 4;
+        }
 
         mesh.vertices = vertices.ToArray();
         mesh.triangles = triangles.ToArray();
+
+        //mesh.vertices = baseVertices;
+        //mesh.triangles = baseTriangles;
 
         for (int recur = 0; recur < recursionDepth; recur++)
         {
@@ -270,6 +322,7 @@ public class GenerateShape : MonoBehaviour {
         triangles = new List<int>(mesh.triangles);
 
         // UV pass
+        /*
         Vector2[] uvs = new Vector2[vertices.Count];
         for (int i = 0; i < triangles.Count; i += 6)
         {
@@ -282,6 +335,7 @@ public class GenerateShape : MonoBehaviour {
             uvs[triangles[i + 5]] = new Vector2(1, 1);
         }
         mesh.uv = uvs;
+        */
 
         // Normalization pass to make it spherical
         for (int i = 0; i < vertices.Count; i++)
