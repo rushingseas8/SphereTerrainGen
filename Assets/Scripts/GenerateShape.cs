@@ -354,6 +354,7 @@ public class GenerateShape : MonoBehaviour {
 
         // UV pass
         Vector2[] uvs = new Vector2[vertices.Length];
+        /*
         for (int i = 0; i < triangles.Length; i += 6)
         {
             uvs[triangles[i + 0]] = new Vector2(0, 1);
@@ -364,6 +365,31 @@ public class GenerateShape : MonoBehaviour {
             uvs[triangles[i + 4]] = new Vector2(0, 0);
             uvs[triangles[i + 5]] = new Vector2(1, 1);
         }
+        */
+
+        // Debug to see the mesh coordinates more clearly.
+        int width = (int)Mathf.Pow(2, recursionDepth);
+        int length = 4 * width;
+        Debug.Log("Width: " + width);
+        for (int w = 0; w < width; w++) {
+            for (int l = 0; l < length / 2; l++) {
+                //int basePos = (w * length) + l;
+                int baseIndex = (w * 3 * 4 * width) + (6 * l);
+
+                Debug.Log(baseIndex);
+                if ((float)l / length >= 0.5f)
+                {
+                    Debug.Log("True!");
+                    uvs[baseIndex] = new Vector2(0, 0);
+                }
+                else
+                {
+                    Debug.Log("False!");
+                    uvs[baseIndex] = new Vector2(1, 1);
+                }
+            }
+        }
+
         mesh.uv = uvs;
 
         // Normalization pass to make it spherical

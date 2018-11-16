@@ -100,7 +100,8 @@ public class CoordinateLookup
     /*
      * top 3 bits of mesh.x is the lobe (5 values)
      * rest of mesh.x is the width
-     * mesh.y is the length.
+     * top bit of mesh.y is triangle (false is lower, true is upper)
+     * rest of mesh.y is the length
      * 
      * Grab the correct stripe of the mesh using lobe info. 
      * Grab the face of the stripe using (mesh.y / totalLength).
@@ -119,7 +120,26 @@ public class CoordinateLookup
         int meshY = (int)meshCoordinate.y; // length
         int lobe = (int)meshCoordinate.z;
 
-        int face = (int)((float)meshY / length);
+        int topTriangle = 0; // TODO pull this from the meshY top bit
+
+        //int face = (int)((float)meshY / length);
+        int face;
+
+        // Are we in the first or second half of the stripe?
+        if ((float)meshY / length > 0.5f)
+        {
+            face = 2;
+        }
+        else
+        {
+            // First half. So check which triangle we're in here.
+            // The split line is x = y. 
+            face = 0;
+            if ((2 * (meshX + meshY)) + topTriangle > width * 2)
+            {
+
+            }
+        }
 
         int triangleBaseIndex = icosahedronTriangles[(lobe * 4) + face];
         Debug.Log("Triangle base index: " + triangleBaseIndex);
