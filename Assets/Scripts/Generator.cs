@@ -160,7 +160,14 @@ public static class Generator {
         Debug.Log("Triangles: " + newTriangles.Count);
     }
 
-    // Takes as input a rhombus-like mesh.
+    /// <summary>
+    /// Subdivides the given mesh, being very careful to preserve the order of the
+    /// vertices and tirangles. As such, it takes an already ordered mesh (with the
+    /// vertices in essentially a rectangular array, and the triangles as described
+    /// within the algorithm), and returns a mesh with 4x as many triangles and vertices,
+    /// maintaining the same ordering.
+    /// </summary>
+    /// <param name="mesh">Mesh.</param>
     public static void SubdivideNotSharedOrdered(Mesh mesh) 
     {
         Vector3[] vertices = mesh.vertices;

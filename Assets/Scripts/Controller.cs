@@ -71,7 +71,7 @@ public class Controller : MonoBehaviour {
 		}
 
 		float planeRotation = mainCamera.transform.rotation.eulerAngles.y;
-		Quaternion quat = Quaternion.Euler (new Vector3 (0, planeRotation, 0));
+        Quaternion quat = Quaternion.Euler (new Vector3 (0, planeRotation, 0));
 
 		Quaternion ang = Quaternion.identity;
 
@@ -120,6 +120,7 @@ public class Controller : MonoBehaviour {
 					this.gameObject.GetComponent<Rigidbody> ().velocity = new Vector3 (0, 5, 0);
 				}
 			}
+            this.gameObject.GetComponent<Rigidbody>().AddForce(-transform.position.normalized * 9.81f, ForceMode.Acceleration);
 		}
 			
 		if (flyingMode) {

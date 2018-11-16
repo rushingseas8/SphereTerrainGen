@@ -62,7 +62,6 @@ public class GenerateShape : MonoBehaviour {
         TERRAIN
     }
 	
-    // TODO standardize all the various methods to use the above parameters
 	void Update () {
         if (!shouldUpdate)
         {
@@ -208,27 +207,12 @@ public class GenerateShape : MonoBehaviour {
         float s = (float)System.Math.Sqrt((5.0 - System.Math.Sqrt(5.0)) / 10.0);
         float t = (float)System.Math.Sqrt((5.0 + System.Math.Sqrt(5.0)) / 10.0);
 
-        List<Vector3> vertices = new List<Vector3>();
-
-        // TODO make an icosphere with non-shared vertices.
-        vertices.Add(new Vector3(-s, t, 0)); // 0
-        vertices.Add(new Vector3(s, t, 0));
-        vertices.Add(new Vector3(-s, -t, 0));
-        vertices.Add(new Vector3(s, -t, 0));
-
-        vertices.Add(new Vector3(0, -s, t)); // 4
-        vertices.Add(new Vector3(0, s, t));
-        vertices.Add(new Vector3(0, -s, -t));
-        vertices.Add(new Vector3(0, s, -t));
-
-        vertices.Add(new Vector3(t, 0, -s)); // 8
-        vertices.Add(new Vector3(t, 0, s));
-        vertices.Add(new Vector3(-t, 0, -s));
-        vertices.Add(new Vector3(-t, 0, s));
-
-        // Order: down, left, down, left
-        Vector3[] baseVertices = {
-            // Face 1: towards +x, +z
+        // Generate the non-shared vertices of the icosahedron. 
+        // We're using the 4 perpendicular quads method to enumerate the vertices, and generate them
+        // via "lobes": a stripe starting at the top vertex, and moving through the faces in a 
+        // down-left-down-left pattern. This matches how we store the faces in memory.
+        Vector3[] vertices = {
+            #region Lobe 1: towards +x, +z
             new Vector3(-s, t, 0),
             new Vector3(0, s, t),
             new Vector3(s, t, 0),
@@ -244,8 +228,10 @@ public class GenerateShape : MonoBehaviour {
             new Vector3(s, -t, 0),
             new Vector3(t, 0, s),  // Swap
             new Vector3(t, 0, -s), // Swap
+            #endregion
 
-            // Face 2: towards +z (slightly towards -x)
+            /*
+            #region Lobe 2: towards +z (slightly towards -x)
             new Vector3(-s, t, 0),
             new Vector3(-t, 0, s),
             new Vector3(0, s, t),
@@ -261,52 +247,96 @@ public class GenerateShape : MonoBehaviour {
             new Vector3(0, -s, t),
             new Vector3(0, s, t), // Swap
             new Vector3(t, 0, s), // Swap
+            #endregion
+
+            #region Lobe 3: towards -x
+            new Vector3(-s, t, 0),
+            new Vector3(-t, 0, -s),
+            new Vector3(-t, 0, s),
+
+            new Vector3(-t, 0, s),
+            new Vector3(-s, -t, 0),
+            new Vector3(-t, 0, -s),
+
+            new Vector3(-s, -t, 0),
+            new Vector3(0, -s, t),
+            new Vector3(-t, 0, s),
+
+            new Vector3(s, -t, 0),
+            new Vector3(-s, -t, 0),
+            new Vector3(0, -s, t),
+            #endregion
+
+            #region Lobe 4: towards -z (slightly towards -x)
+            new Vector3(-s, t, 0),
+            new Vector3(0, s, -t),
+            new Vector3(-t, 0, -s),
+
+            new Vector3(-t, 0, -s),
+            new Vector3(0, -s, -t), // Swapped
+            new Vector3(0, s, -t),  // Swapped
+
+            new Vector3(0, -s, -t),
+            new Vector3(-s, -t, 0),
+            new Vector3(-t, 0, -s),
+
+            new Vector3(s, -t, 0),
+            new Vector3(0, -s, -t), // Swapped
+            new Vector3(-s, -t, 0), // Swapped
+            #endregion
+
+            #region Lobe 5: towards +x, -z
+            new Vector3(-s, t, 0),
+            new Vector3(s, t, 0),
+            new Vector3(0, s, -t),
+
+            new Vector3(0, s, -t),
+            new Vector3(t, 0, -s), // Swapped
+            new Vector3(s, t, 0),  // Swapped
+
+            new Vector3(t, 0, -s),
+            new Vector3(0, -s, -t),
+            new Vector3(0, s, -t),
+
+            new Vector3(s, -t, 0),
+            new Vector3(t, 0, -s),  // Swapped
+            new Vector3(0, -s, -t), // Swapped
+
+            #endregion
+            */
         };
 
-        List<int> triangles = new List<int>() {
-            //0, 11, 5, // 1 (face 2)
-            //0, 5, 1, // 1 (face 1)
-            //0, 1, 7,
-            //0, 7, 10,
-            //0, 10, 11,
+        float angle = Mathf.Rad2Deg * Mathf.Acos(1.0f / (2.0f * Mathf.Sin(2f * Mathf.PI / 5f)));
+        angle = (180 - angle - angle) / 2f;
 
-            //1, 5, 9, // 2 (face 1)
-            //5, 11, 4, // 2 (face 2)
-            //11, 10, 2,
-            //10, 7, 6,
-            //7, 1, 8,
-
-            //3, 9, 4, // 4 (face 2)
-            //3, 4, 2,
-            //3, 2, 6,
-            //3, 6, 8,
-            //3, 8, 9, // 4 (face 1)
-
-            //4, 9, 5, // 3 (face 2)
-            //2, 4, 11,
-            //6, 2, 10,
-            //8, 6, 7,
-            //9, 8, 1 // 3 (face 1)
-        };
-
-        int[] baseTriangles = new int[24];
-        for (int i = 0; i < baseTriangles.Length; i += 6)
+        // Rotate the whole icosahedron so the point is upwards. 
+        // 
+        // The above definition for vertices is convenient to write the points out for, z
+        // but generates a  mesh that has its vertices offset from center.
+        for (int i = 0; i < vertices.Length; i++)
         {
-            baseTriangles[i + 0] = i + 0;
-            baseTriangles[i + 1] = i + 1;
-            baseTriangles[i + 2] = i + 2;
-
-            baseTriangles[i + 3] = i + 3;
-            baseTriangles[i + 4] = i + 5;
-            baseTriangles[i + 5] = i + 4;
+            //Quaternion.AngleAxis(-90, Vector3.forward) * Quaternion.AngleAxis(angle, Vector3.forward) *
+            vertices[i] = Quaternion.AngleAxis(-angle, Vector3.forward) * vertices[i];
         }
 
-        mesh.vertices = vertices.ToArray();
-        mesh.triangles = triangles.ToArray();
+        // Triangles are generated with the last two vertices flipped, so every face faces outwards.
+        int[] triangles = new int[12];
+        for (int i = 0; i < triangles.Length; i += 6)
+        {
+            triangles[i + 0] = i + 0;
+            triangles[i + 1] = i + 1;
+            triangles[i + 2] = i + 2;
 
-        //mesh.vertices = baseVertices;
-        //mesh.triangles = baseTriangles;
+            triangles[i + 3] = i + 3;
+            triangles[i + 4] = i + 5;
+            triangles[i + 5] = i + 4;
+        }
 
+        // Assign the vertices and triangles to the mesh
+        mesh.vertices = vertices;
+        mesh.triangles = triangles;
+
+        // Recursively subdivide the mesh
         for (int recur = 0; recur < recursionDepth; recur++)
         {
             if (connectedTriangles)
@@ -318,13 +348,13 @@ public class GenerateShape : MonoBehaviour {
                 Generator.SubdivideNotSharedOrdered(mesh);
             }
         }
-        vertices = new List<Vector3>(mesh.vertices);
-        triangles = new List<int>(mesh.triangles);
+        // Update the vertices and triangles, since we subdivided
+        vertices = mesh.vertices;
+        triangles = mesh.triangles;
 
         // UV pass
-        /*
-        Vector2[] uvs = new Vector2[vertices.Count];
-        for (int i = 0; i < triangles.Count; i += 6)
+        Vector2[] uvs = new Vector2[vertices.Length];
+        for (int i = 0; i < triangles.Length; i += 6)
         {
             uvs[triangles[i + 0]] = new Vector2(0, 1);
             uvs[triangles[i + 1]] = new Vector2(1, 1);
@@ -335,17 +365,16 @@ public class GenerateShape : MonoBehaviour {
             uvs[triangles[i + 5]] = new Vector2(1, 1);
         }
         mesh.uv = uvs;
-        */
 
         // Normalization pass to make it spherical
-        for (int i = 0; i < vertices.Count; i++)
+        for (int i = 0; i < vertices.Length; i++)
         {
             Vector3 v = vertices[i];
             Vector3 n = vertices[i].normalized;
 
             vertices[i] = ((normalizationAmount * n) + ((1 - normalizationAmount) * v));
         }
-        mesh.vertices = vertices.ToArray();
+        mesh.vertices = vertices;
         mesh.RecalculateNormals();
     }
 
@@ -560,6 +589,7 @@ public class GenerateShape : MonoBehaviour {
 
         mesh.vertices = vertices;
         Debug.Log("Vertices: " + vertices.Length);
+        Debug.Log("Triangles: " + triangles.Length / 3);
 
         mesh.RecalculateNormals();
     }
