@@ -312,7 +312,7 @@ public class GenerateShape : MonoBehaviour {
         // Rotate the whole icosahedron so the point is upwards. 
         // 
         // The above definition for vertices is convenient to write the points out for, z
-        // but generates a  mesh that has its vertices offset from center.
+        // but generates a mesh that has its vertices offset from center.
         for (int i = 0; i < vertices.Length; i++)
         {
             //Quaternion.AngleAxis(-90, Vector3.forward) * Quaternion.AngleAxis(angle, Vector3.forward) *

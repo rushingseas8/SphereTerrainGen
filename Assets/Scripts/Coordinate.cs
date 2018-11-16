@@ -2,59 +2,74 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Coordinate
+public class CoordinateLookup
 {
 
-    private static float s = (float)System.Math.Sqrt((5.0 - System.Math.Sqrt(5.0)) / 10.0);
-    private static float t = (float)System.Math.Sqrt((5.0 + System.Math.Sqrt(5.0)) / 10.0);
+    private static Vector3[] icosahedronVertices;
+    private static int[] icosahedronTriangles;
 
-    private static Vector3[] vertices = {
-        new Vector3(-s, t, 0),
-        new Vector3(s, t, 0),
-        new Vector3(-s, -t, 0),
-        new Vector3(s, -t, 0),
+    public CoordinateLookup() {
+        float s = (float)System.Math.Sqrt((5.0 - System.Math.Sqrt(5.0)) / 10.0);
+        float t = (float)System.Math.Sqrt((5.0 + System.Math.Sqrt(5.0)) / 10.0);
 
-        new Vector3(0, -s, t),
-        new Vector3(0, s, t),
-        new Vector3(0, -s, -t),
-        new Vector3(0, s, -t),
+        icosahedronVertices = new Vector3[] {
+            new Vector3(-s, t, 0),
+            new Vector3(s, t, 0),
+            new Vector3(-s, -t, 0),
+            new Vector3(s, -t, 0),
 
-        new Vector3(t, 0, -s),
-        new Vector3(t, 0, s),
-        new Vector3(-t, 0, -s),
-        new Vector3(-t, 0, s)
-    };
+            new Vector3(0, -s, t),
+            new Vector3(0, s, t),
+            new Vector3(0, -s, -t),
+            new Vector3(0, s, -t),
 
-    private static int[] triangles = {
-        0, 5, 1,
-        1, 5, 9,
-        9, 8, 1,
-        3, 8, 9,
+            new Vector3(t, 0, -s),
+            new Vector3(t, 0, s),
+            new Vector3(-t, 0, -s),
+            new Vector3(-t, 0, s)
+        };
 
+        float angle = Mathf.Rad2Deg * Mathf.Acos(1.0f / (2.0f * Mathf.Sin(2f * Mathf.PI / 5f)));
+        angle = (180 - angle - angle) / 2f;
 
+        // Rotate the whole icosahedron so the point is upwards. 
+        // 
+        // The above definition for vertices is convenient to write the points out for, z
+        // but generates a mesh that has its vertices offset from center.
+        for (int i = 0; i < icosahedronVertices.Length; i++)
+        {
+            icosahedronVertices[i] = Quaternion.AngleAxis(-angle, Vector3.forward) * icosahedronVertices[i];
+        }
 
+        // The triangles of the base icosahedron, grouped in order of lobe stripes.
+        // Each group of 4 is a lobe, and each triangle within that is a face.
+        icosahedronTriangles = new int[] {
+            0, 5, 1,
+            1, 5, 9,
+            9, 8, 1,
+            3, 8, 9,
 
+            0, 11, 5,
+            5, 11, 4,
+            4, 9, 5,
+            3, 9, 4,
 
-        0, 11, 5,
-        0, 1, 7,
-        0, 7, 10,
-        0, 10, 11,
+            0, 10, 11,
+            11, 10, 2,
+            2, 4, 11,
+            3, 4, 2,
 
-        5, 11, 4,
-        11, 10, 2,
-        10, 7, 6,
-        7, 1, 8,
+            0, 7, 10,
+            10, 7, 6,
+            6, 2, 10,
+            3, 2, 6,
 
-        3, 9, 4,
-        3, 4, 2,
-        3, 2, 6,
-        3, 6, 8,
-
-        4, 9, 5,
-        2, 4, 11,
-        6, 2, 10,
-        8, 6, 7,
-    };
+            0, 1, 7,
+            7, 1, 8,
+            8, 6, 7,
+            3, 6, 8
+        };
+    }
 
 
     // Reference to the triangles and which face/lobe they describe
@@ -82,9 +97,6 @@ public class Coordinate
     //3, 6, 8, // 4 (face 5)
     //3, 8, 9, // 4 (face 1)
 
-
-
-
     /*
      * top 3 bits of mesh.x is the lobe (5 values)
      * rest of mesh.x is the width
@@ -103,8 +115,16 @@ public class Coordinate
         int width = (int)Mathf.Pow(2, recursionDepth);
         int length = 4 * width;
 
+        int meshX = (int)meshCoordinate.x; // width
+        int meshY = (int)meshCoordinate.y; // length
+        int lobe = (int)meshCoordinate.z;
 
+        int face = (int)((float)meshY / length);
 
+        int triangleBaseIndex = icosahedronTriangles[(lobe * 4) + face];
+        Debug.Log("Triangle base index: " + triangleBaseIndex);
+
+        // TODO need "side" info; are we asking for the top or bottom triangle in the square mesh coordinate?
 
 
         return Vector3.zero;
