@@ -75,29 +75,6 @@ public class CoordinateLookup
         };
     }
 
-    public Vector2Int GetMeshCoordinate(int lobe, int width, int length, int triangleIndex)
-    {
-        Profiler.BeginSample("GetMeshCoordinate");
-        Vector2Int toReturn = new Vector2Int((lobe << 29) | width, (triangleIndex << 30) | length);
-
-        int meshX = toReturn.x; // width
-        int meshY = toReturn.y; // length
-
-        int _lobe = 7 & meshX >> 29; // Top 3 bits of mesh X is lobe. The "7 &" part removes the sign bit.
-        int _triangleIndex = 3 & (meshY >> 30); // Top 2 bits of mesh Y is triangle index. The "3 &" part removes the sign bit.
-
-        meshX = (meshX << 3) >> 3; // Clear out the top 3 bits of mesh X
-        meshY = (meshY << 2) >> 2; // Clear out the top 2 bits of mesh Y
-
-        Debug.Assert(lobe == _lobe);
-        Debug.Assert(triangleIndex == _triangleIndex);
-        Debug.Assert(width == meshX);
-        Debug.Assert(length == meshY);
-
-        Profiler.EndSample();
-        return toReturn;
-    }
-
     /*
      * top 3 bits of mesh.x is the lobe (5 values)
      * rest of mesh.x is the width
@@ -110,20 +87,13 @@ public class CoordinateLookup
      * Find exact triangle coordinates using face and coordinates (coordinates give relative position)
      * Normalize triangle coordinates to obtain spherical coordinate. 
      */
-    public Vector3 MeshToSphere(Vector2Int meshCoordinate, int recursionDepth) 
+    public Vector3 MeshToSphere(int lobe, int meshX, int meshY, int triangleIndex, int recursionDepth) 
     {
         Profiler.BeginSample("MeshToSphere");
+
+        Profiler.BeginSample("MeshToSphere.Setup");
         int width = (int)Mathf.Pow(2, recursionDepth);
         int length = 4 * width;
-
-        int meshX = meshCoordinate.x; // width
-        int meshY = meshCoordinate.y; // length
-
-        int lobe = 7 & meshX >> 29; // Top 3 bits of mesh X is lobe. The "7 &" part removes the sign bit.
-        int triangleIndex = 3 & (meshY >> 30); // Top 2 bits of mesh Y is triangle index. The "3 &" part removes the sign bit.
-
-        meshX = (meshX << 3) >> 3; // Clear out the top 3 bits of mesh X
-        meshY = (meshY << 2) >> 2; // Clear out the top 2 bits of mesh Y
 
         // We preserve the parity bit. This is needed because the top and bottom triangle in the mesh respond differently
         // to the "triangleIndex" value. 
@@ -131,7 +101,9 @@ public class CoordinateLookup
 
         // Divide the mesh Y by 2. This essentially converts from triangle indices -> rhombus indicies in the mesh.
         meshY /= 2;
+        Profiler.EndSample();
 
+        Profiler.BeginSample("MeshToSphere.Asserts");
         // Make some assertions here
         if (meshX > width)
         {
@@ -154,6 +126,7 @@ public class CoordinateLookup
         if (triangleIndex > 3) {
             Debug.LogError("Invalid triangle index in MeshToSphere: " + triangleIndex + " when index should be in range [0, 2].");
         }
+        Profiler.EndSample();
 
         /*
          * Figure out which face we're on within this given lobe.
@@ -182,6 +155,8 @@ public class CoordinateLookup
          * |/____|/____|
          * 
          */
+
+        Profiler.BeginSample("MeshToSphere.FaceComputation");
         int face;
 
         // Face 0 or 1
@@ -215,12 +190,14 @@ public class CoordinateLookup
                 face = 3;
             }
         }
+        Profiler.EndSample();
 
         // Compute the offset due to the parity and triangle index.
         // The top-left corner of a rectangle is the zero point. "triangleIndex" defines
         // an offset relative to this zero point. The reason why we can't just pass in the raw
         // meshX and meshY values is because those would otherwise evaluate to being on the wrong face.
         // Thus, by specifying the base and offset like this, we can compute the correct face first.
+        Profiler.BeginSample("MeshToSphere.TriangleOffset");
         if (parity == 0) {
             if (triangleIndex == 1)
             {
@@ -242,7 +219,9 @@ public class CoordinateLookup
                 meshY += 1;
             }
         }
+        Profiler.EndSample();
 
+        Profiler.BeginSample("MeshToSphere.VertexComputation");
         // Grab the base index of the triangle array, based on the lobe and face.
         int triangleBaseIndex = 3 * ((lobe * 4) + face);
 
@@ -256,9 +235,12 @@ public class CoordinateLookup
         float relativeX = (float)meshX / width;
         float relativeY = (float)meshY / width;
 
+        Profiler.EndSample();
+
         // Using the relative mesh coordinates, we compute the offset within this
         // face of the icosahedron. Because the faces alternate from up and down facing
         // triangles, we reverse the relative coordinates for every odd face (1 or 3).
+        Profiler.BeginSample("MeshToSphere.IcosahedronVector");
         Vector3 icosahedronVector;
         if (face % 2 == 0)
         {
@@ -278,6 +260,7 @@ public class CoordinateLookup
 
             icosahedronVector = basis + baseX + baseY;
         }
+        Profiler.EndSample();
 
         // Finally, we normalize the vector to project it to the sphere.
         Profiler.EndSample();

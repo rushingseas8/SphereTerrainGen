@@ -56,9 +56,9 @@ public class Perlin
 
         if (compute == null)
         {
-            kernelIndex = compute.FindKernel("Perlin3D");
-
             compute = Resources.Load<ComputeShader>("Shaders/Perlin3D");
+
+            kernelIndex = compute.FindKernel("Perlin3D");
 
             inputBuffer = new ComputeBuffer(input.Length, 12);
             outputBuffer = new ComputeBuffer(input.Length, 4);
@@ -74,16 +74,17 @@ public class Perlin
         int parallel = 128;
         while (numFinished < input.Length)
         {
-            Debug.Log("Finished " + numFinished);
+            //Debug.Log("Finished " + numFinished);
 
             // Load in the input Vector3s
             inputBuffer.SetData(input, numFinished, numFinished, parallel);
             compute.Dispatch(kernelIndex, (input.Length / parallel), 1, 1);
 
             //Vector3[] result = new Vector3[1024];
-            outputBuffer.GetData(outputArray, numFinished, numFinished, parallel);
             numFinished += parallel;
         }
+
+        outputBuffer.GetData(outputArray);
 
         inputBuffer.Release();
         outputBuffer.Release();

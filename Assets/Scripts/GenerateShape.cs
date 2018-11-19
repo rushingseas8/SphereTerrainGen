@@ -473,9 +473,9 @@ public class GenerateShape : MonoBehaviour {
                 {
                     int baseIndex = 3 * ((w * length) + l) + (lobe * vertices.Length / 5);
 
-                    vertices[baseIndex + 0] = lookup.MeshToSphere(lookup.GetMeshCoordinate(lobe, w, l, 0), recursionDepth);
-                    vertices[baseIndex + 1] = lookup.MeshToSphere(lookup.GetMeshCoordinate(lobe, w, l, 1), recursionDepth);
-                    vertices[baseIndex + 2] = lookup.MeshToSphere(lookup.GetMeshCoordinate(lobe, w, l, 2), recursionDepth);
+                    vertices[baseIndex + 0] = lookup.MeshToSphere(lobe, w, l, 0, recursionDepth);
+                    vertices[baseIndex + 1] = lookup.MeshToSphere(lobe, w, l, 1, recursionDepth);
+                    vertices[baseIndex + 2] = lookup.MeshToSphere(lobe, w, l, 2, recursionDepth);
                 }
             }
         }
