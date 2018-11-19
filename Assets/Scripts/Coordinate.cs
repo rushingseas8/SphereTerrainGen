@@ -39,34 +39,44 @@ public class CoordinateLookup
         for (int i = 0; i < icosahedronVertices.Length; i++)
         {
             icosahedronVertices[i] = Quaternion.AngleAxis(-angle, Vector3.forward) * icosahedronVertices[i];
+            //icosahedronVertices[i] = icosahedronVertices[i].normalized;
         }
 
         // The triangles of the base icosahedron, grouped in order of lobe stripes.
         // Each group of 4 is a lobe, and each triangle within that is a face.
+        // The triangles are ordered in such a way that we can easily map mesh coordinates to their location in the icosahedron.
         icosahedronTriangles = new int[] {
             0, 5, 1,
-            1, 5, 9,
-            9, 8, 1,
+            9, 1, 5,
+            1, 9, 8,
             3, 8, 9,
 
             0, 11, 5,
-            5, 11, 4,
-            4, 9, 5,
+            //5, 11, 4,
+            4, 5, 11,
+            //4, 9, 5,
+            5, 4, 9,
             3, 9, 4,
 
             0, 10, 11,
-            11, 10, 2,
-            2, 4, 11,
+            //11, 10, 2,
+            2, 11, 10,
+            //2, 4, 11,
+            11, 2, 4,
             3, 4, 2,
 
             0, 7, 10,
-            10, 7, 6,
-            6, 2, 10,
+            //10, 7, 6,
+            6, 10, 7,
+            //6, 2, 10,
+            10, 6, 2,
             3, 2, 6,
 
             0, 1, 7,
-            7, 1, 8,
-            8, 6, 7,
+            //7, 1, 8,
+            8, 7, 1,
+            //8, 6, 7,
+            7, 8, 6,
             3, 6, 8
         };
     }
@@ -97,9 +107,25 @@ public class CoordinateLookup
     //3, 6, 8, // 4 (face 5)
     //3, 8, 9, // 4 (face 1)
 
-    public Vector2Int GetMeshCoordinate(int lobe, int width, int height, int parity)
+    public Vector2Int GetMeshCoordinate(int lobe, int width, int length, int triangleIndex)
     {
-        return new Vector2Int((lobe << 29) | width, (parity << 31) | height);
+        Vector2Int toReturn = new Vector2Int((lobe << 29) | width, (triangleIndex << 30) | length);
+
+        int meshX = toReturn.x; // width
+        int meshY = toReturn.y; // length
+
+        int _lobe = 7 & meshX >> 29; // Top 3 bits of mesh X is lobe. The "7 &" part removes the sign bit.
+        int _triangleIndex = 3 & (meshY >> 30); // Top 2 bits of mesh Y is triangle index. The "3 &" part removes the sign bit.
+
+        meshX = (meshX << 3) >> 3; // Clear out the top 3 bits of mesh X
+        meshY = (meshY << 2) >> 2; // Clear out the top 2 bits of mesh Y
+
+        Debug.Assert(lobe == _lobe);
+        Debug.Assert(triangleIndex == _triangleIndex);
+        Debug.Assert(width == meshX);
+        Debug.Assert(length == meshY);
+
+        return toReturn;
     }
 
     /*
@@ -125,10 +151,13 @@ public class CoordinateLookup
         int meshY = meshCoordinate.y; // length
 
         int lobe = 7 & meshX >> 29; // Top 3 bits of mesh X is lobe. The "7 &" part removes the sign bit.
-        int parity = 1 & (meshY >> 31); // Top bit of mesh Y is parity bit. The "1 &" part removes the sign bit.
+        int triangleIndex = 3 & (meshY >> 30); // Top 2 bits of mesh Y is triangle index. The "3 &" part removes the sign bit.
 
         meshX = (meshX << 3) >> 3; // Clear out the top 3 bits of mesh X
-        meshY = (meshY << 1) >> 1; // Clear out the top bit of mesh Y
+        meshY = (meshY << 2) >> 2; // Clear out the top 2 bits of mesh Y
+
+        int parity = meshY % 2;
+        meshY /= 2;
 
         // Make some assertions here
         if (meshX > width)
@@ -149,15 +178,19 @@ public class CoordinateLookup
             return Vector3.zero;
         }
 
-        Debug.Log("Mesh x: " + meshX + " mesh y: " + meshY + " lobe: " + lobe + " parity: " + parity + " Length: " + length);
+        if (triangleIndex > 3) {
+            Debug.LogError("Invalid triangle index in MeshToSphere: " + triangleIndex + " when index should be in range [0, 2].");
+        }
+
+        //Debug.Log("Mesh x: " + meshX + " mesh y: " + meshY + " lobe: " + lobe + " triangle index: " + triangleIndex + " Length: " + length);
 
         int face;
 
         // Face 0 or 1
-        if (meshY < (length / 2f))
+        if (meshY < (length / 4f))
         {
             // We're on the first half; face 0
-            if ((2 * meshX) + meshY + parity < length / 2f)
+            if (meshX + meshY + parity < length / 4f)
             {
                 face = 0;
             }
@@ -171,7 +204,7 @@ public class CoordinateLookup
         else
         {
             // We're on the first half; face 2
-            if ((2 * meshX) + meshY + parity < length)
+            if (meshX + meshY + parity < length / 2f)
             {
                 face = 2;
             }
@@ -181,9 +214,42 @@ public class CoordinateLookup
                 face = 3;
             }
         }
-        Debug.Log("Face: " + face);
 
-        int triangleBaseIndex = icosahedronTriangles[(lobe * 4) + face];
+        // Compute the offset due to the parity and triangle index.
+        if (parity == 0) {
+            if (triangleIndex == 1)
+            {
+                meshX += 1;
+            }
+            if (triangleIndex == 2)
+            {
+                meshY += 1;
+            }
+        } else {
+            if (triangleIndex == 0) {
+                meshX += 1;
+            }
+            if (triangleIndex == 1) {
+                meshY += 1;
+            }
+            if (triangleIndex == 2) {
+                meshX += 1;
+                meshY += 1;
+            }
+        }
+
+        if (face >= 2) {
+            meshY -= (length / 4);
+        }
+
+        //face = 0;
+        //Debug.Log("Face: " + face);
+
+        //int moduloFace = (face / 2) * 2;
+        //if (face == 1) { face = 0; }
+        //if (face == 2 || face == 3) { face = 1; }
+
+        int triangleBaseIndex = 3 * ((lobe * 4) + face);
         //Debug.Log("Triangle base index: " + triangleBaseIndex);
 
         Vector3 v1 = icosahedronVertices[icosahedronTriangles[triangleBaseIndex + 0]];
@@ -195,8 +261,45 @@ public class CoordinateLookup
         float relativeX = (float)meshX / width;
         float relativeY = (float)meshY / width;
 
-        Debug.Log("Returning: " + (Vector3.Lerp(v1, v2, relativeX) + Vector3.Lerp(v1, v3, relativeY)));
-        return Vector3.Lerp(v1, v2, relativeX) + Vector3.Lerp(v1, v3, relativeY);
+        //Debug.Log("Returning: " + (Vector3.Lerp(v1, v2, relativeX) + Vector3.Lerp(v1, v3, relativeY)).normalized);
+        //Debug.Log("Relative x: " + relativeX + " and relative y: " + relativeY);
+
+        //Debug.Assert(!(face == 2 || face == 3));
+
+        Debug.Log("Face: " + face + " V1: " + v1 + " V2: " + v2 + " V3: " + v3);
+
+
+        if (face % 2 == 0)
+        {
+            Vector3 basis = v1;
+
+            Vector3 baseX = relativeX * (v2 - v1);
+            Vector3 baseY = relativeY * (v3 - v1);
+
+            return basis + baseX + baseY;
+            //return (Vector3.Lerp(v1, v2, relativeX) + Vector3.Lerp(v1, v3, relativeY)) / 2f;
+            //return Vector3.Lerp(v1, v2, relativeX) + relativeY * Vector3.right;
+        }
+        else {
+
+            Vector3 basis = v1;
+
+            Vector3 baseX = (1 - relativeX) * (v2 - v1);
+            Vector3 baseY = (1 - relativeY) * (v3 - v1);
+
+            return basis + baseX + baseY;
+
+            //return (Vector3.Lerp(v1, v3, relativeX) + Vector3.Lerp(v2, v3, relativeY));
+            //return (Vector3.Lerp(v1, v3, relativeX) + Vector3.Lerp(v2, v3, relativeY)) / 2f;
+
+            // Need to normalize relative X and Y to be 0 at their respective 0 points.
+            //return (Vector3.Lerp(v1, v2, relativeX) + Vector3.Lerp(v1, v3, relativeY));
+        }
+
+        //return (Vector3.Lerp(v1, v2, relativeX) + Vector3.Lerp(v1, v3, relativeY));
+
+        //return (Vector3.Lerp(v1, v3, relativeX) + Vector3.Lerp(v2, v3, relativeY));
+        //return (Vector3.Lerp(v1, v3, relativeX) + Vector3.Lerp(v2, v3, relativeY));
     }
 
     /*

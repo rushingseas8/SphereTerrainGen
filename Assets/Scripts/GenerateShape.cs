@@ -447,32 +447,158 @@ public class GenerateShape : MonoBehaviour {
 
         CoordinateLookup lookup = new CoordinateLookup();
 
-        Vector3[] vertices = new Vector3[3 * 5 * width * length];
+        Vector3[] vertices = new Vector3[5 * 3 * width * length];
+        //for (int lobe = 0; lobe < 1; lobe++)
+        //{
+        //    for (int w = 0; w < width; w++)
+        //    {
+        //        for (int l = 0; l < length; l += 2)
+        //        {
+        //            int baseIndex = 3 * ((w * length) + l) + (int)(lobe * vertices.Length / 5f);
+        //            //Debug.Log("Base index: " + baseIndex);
+
+        //            int halfL = l / 2;
+
+        //            vertices[baseIndex + 0] = lookup.MeshToSphere(lookup.GetMeshCoordinate(lobe, w, halfL, 0), recursionDepth);
+        //            vertices[baseIndex + 1] = lookup.MeshToSphere(lookup.GetMeshCoordinate(lobe, w + 1, halfL, 0), recursionDepth);
+        //            vertices[baseIndex + 2] = lookup.MeshToSphere(lookup.GetMeshCoordinate(lobe, w, halfL + 1, 0), recursionDepth);
+
+        //            vertices[baseIndex + 3] = lookup.MeshToSphere(lookup.GetMeshCoordinate(lobe, w + 1, halfL, 1), recursionDepth);
+        //            vertices[baseIndex + 4] = lookup.MeshToSphere(lookup.GetMeshCoordinate(lobe, w, halfL + 1, 1), recursionDepth);
+        //            vertices[baseIndex + 5] = lookup.MeshToSphere(lookup.GetMeshCoordinate(lobe, w + 1, halfL + 1, 1), recursionDepth);
+
+        //            //vertices[baseIndex + 0] = new Vector3(w, halfL);
+        //            //vertices[baseIndex + 1] = new Vector3(w + 1, halfL);
+        //            //vertices[baseIndex + 2] = new Vector3(w, halfL + 1);
+
+        //            //vertices[baseIndex + 3] = new Vector3(w + 1, halfL);
+        //            //vertices[baseIndex + 4] = new Vector3(w, halfL + 1);
+        //            //vertices[baseIndex + 5] = new Vector3(w + 1, halfL + 1);
+        //        }
+        //    }
+        //}
+
         for (int lobe = 0; lobe < 5; lobe++)
         {
             for (int w = 0; w < width; w++)
             {
                 for (int l = 0; l < length; l++)
                 {
-                    int baseIndex = 3 * ((lobe * width * length) + (w * length) + l);
+                    int baseIndex = 3 * ((w * length) + l) + (int)(lobe * vertices.Length / 5f);
                     //Debug.Log("Base index: " + baseIndex);
 
-                    vertices[baseIndex + 0] = lookup.MeshToSphere(lookup.GetMeshCoordinate(lobe, w, l / 2, l % 2), recursionDepth);
-                    vertices[baseIndex + 1] = lookup.MeshToSphere(lookup.GetMeshCoordinate(lobe, w + 1, l / 2, l % 2), recursionDepth);
-                    vertices[baseIndex + 2] = lookup.MeshToSphere(lookup.GetMeshCoordinate(lobe, w, (l / 2) + 1, l % 2), recursionDepth);
+                    //int halfL = l / 2;
+                    //int parity = l % 2;
+
+                    //if (parity == 0)
+                    //{
+                    //    vertices[baseIndex + 0] = lookup.MeshToSphere(lookup.GetMeshCoordinate(lobe, w, l, parity), recursionDepth);
+                    //    vertices[baseIndex + 1] = lookup.MeshToSphere(lookup.GetMeshCoordinate(lobe, w + 1, halfL, parity), recursionDepth);
+                    //    vertices[baseIndex + 2] = lookup.MeshToSphere(lookup.GetMeshCoordinate(lobe, w, halfL + 1, parity), recursionDepth);
+                    //}
+                    //else
+                    //{
+                    //    vertices[baseIndex + 0] = lookup.MeshToSphere(lookup.GetMeshCoordinate(lobe, w + 1, halfL, parity), recursionDepth);
+                    //    vertices[baseIndex + 1] = lookup.MeshToSphere(lookup.GetMeshCoordinate(lobe, w, halfL + 1, parity), recursionDepth);
+                    //    vertices[baseIndex + 2] = lookup.MeshToSphere(lookup.GetMeshCoordinate(lobe, w + 1, halfL + 1, parity), recursionDepth);
+                    //}
+
+
+                    vertices[baseIndex + 0] = lookup.MeshToSphere(lookup.GetMeshCoordinate(lobe, w, l, 0), recursionDepth);
+                    vertices[baseIndex + 1] = lookup.MeshToSphere(lookup.GetMeshCoordinate(lobe, w, l, 1), recursionDepth);
+                    vertices[baseIndex + 2] = lookup.MeshToSphere(lookup.GetMeshCoordinate(lobe, w, l, 2), recursionDepth);
+
+                    //vertices[baseIndex + 0] = new Vector3(w, l);
+                    //vertices[baseIndex + 1] = new Vector3(w + 1, l);
+                    //vertices[baseIndex + 2] = new Vector3(w, l + 1);
+
+                    //if (parity == 0)
+                    //{
+                    //    vertices[baseIndex + 0] = new Vector3(w, halfL);
+                    //    vertices[baseIndex + 1] = new Vector3(w + 1, halfL);
+                    //    vertices[baseIndex + 2] = new Vector3(w, halfL + 1);
+                    //} else 
+                    //{
+                    //    vertices[baseIndex + 0] = new Vector3(w + 1, halfL);
+                    //    vertices[baseIndex + 1] = new Vector3(w, halfL + 1);
+                    //    vertices[baseIndex + 2] = new Vector3(w + 1, halfL + 1);
+                    //}
+
                 }
             }
         }
 
+
+
         int[] triangles = new int[vertices.Length];
-        for (int i = 0; i < vertices.Length; i++)
+        for (int i = 0; i < vertices.Length; i += 6)
         {
-            //Debug.Log(vertices[i]);
-            triangles[i] = i;
+            triangles[i + 0] = i + 0;
+            triangles[i + 1] = i + 1;
+            triangles[i + 2] = i + 2;
+
+            triangles[i + 3] = i + 3;
+            triangles[i + 4] = i + 5;
+            triangles[i + 5] = i + 4;
+        }
+
+        Vector2[] uvs = new Vector2[vertices.Length];
+        for (int lobe = 0; lobe < 5; lobe++)
+        {
+            for (int w = 0; w < width; w++)
+            {
+                for (int l = 0; l < length; l++)
+                {
+                    int basePos = 3 * ((w * length) + l) + (int)(lobe * vertices.Length / 5f);
+
+                    int p = l % 2;
+                    // Face 0 or 1
+                    //if (l < (length / 2f))
+                    //{
+                    //    // We're on the first half; face 0
+                    //    if ((2 * w) + l + p < length / 2f)
+                    //    {
+                    //        uvs[basePos + 0] = new Vector2(0, 0);
+                    //        uvs[basePos + 1] = new Vector2(0, 1);
+                    //        uvs[basePos + 2] = new Vector2(1, 1);
+                    //    }
+                    //    // Second half; face 1
+                    //    else
+                    //    {
+                    //        uvs[basePos + 0] = new Vector2(0, 0);
+                    //        uvs[basePos + 1] = new Vector2(0, 1);
+                    //        uvs[basePos + 2] = new Vector2(1, 0);
+                    //    }
+                    //}
+                    //// Face 2 or 3
+                    //else
+                    //{
+                    //    // We're on the first half; face 2
+                    //    if ((2 * w) + l + p < length)
+                    //    {
+                    //        uvs[basePos + 0] = new Vector2(0, 0);
+                    //        uvs[basePos + 1] = new Vector2(0, 1);
+                    //        uvs[basePos + 2] = new Vector2(1, 1);
+                    //    }
+                    //    // Second half; face 3
+                    //    else
+                    //    {
+                    //        uvs[basePos + 0] = new Vector2(0, 0);
+                    //        uvs[basePos + 1] = new Vector2(0, 1);
+                    //        uvs[basePos + 2] = new Vector2(1, 0);
+                    //    }
+                    //}
+
+                    uvs[basePos + 0] = new Vector2((float)w / width, (float)l / length);
+                    uvs[basePos + 1] = new Vector2((float)w / width, (float)l / length);
+                    uvs[basePos + 2] = new Vector2((float)w / width, (float)l / length);
+                }
+            }
         }
 
         mesh.vertices = vertices;
         mesh.triangles = triangles;
+        mesh.uv = uvs;
         mesh.RecalculateNormals();
     }
 
