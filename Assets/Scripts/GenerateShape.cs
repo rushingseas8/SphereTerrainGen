@@ -61,7 +61,8 @@ public class GenerateShape : MonoBehaviour {
         CUBE,
         ICOSPHERE,
         RHOMBUS,
-        TERRAIN
+        TERRAIN,
+        ICOSPHERE2
     }
 	
 	void Update () {
@@ -77,6 +78,7 @@ public class GenerateShape : MonoBehaviour {
             case Shape.ICOSPHERE: GenerateIcosphere(mesh); break;
             case Shape.RHOMBUS: GenerateRhombus(mesh); break;
             case Shape.TERRAIN: GenerateTerrain(mesh); break;
+            case Shape.ICOSPHERE2: GenerateIcosphere2(mesh); break;
             default: GenerateIcosphere(mesh); break;
         }
 
@@ -435,6 +437,42 @@ public class GenerateShape : MonoBehaviour {
             vertices[i] = ((normalizationAmount * n) + ((1 - normalizationAmount) * v));
         }
         mesh.vertices = vertices;
+        mesh.RecalculateNormals();
+    }
+
+    private void GenerateIcosphere2(Mesh mesh)
+    {
+        int width = (int)Mathf.Pow(2, recursionDepth);
+        int length = 4 * width;
+
+        CoordinateLookup lookup = new CoordinateLookup();
+
+        Vector3[] vertices = new Vector3[3 * 5 * width * length];
+        for (int lobe = 0; lobe < 5; lobe++)
+        {
+            for (int w = 0; w < width; w++)
+            {
+                for (int l = 0; l < length; l++)
+                {
+                    int baseIndex = 3 * ((lobe * width * length) + (w * length) + l);
+                    //Debug.Log("Base index: " + baseIndex);
+
+                    vertices[baseIndex + 0] = lookup.MeshToSphere(lookup.GetMeshCoordinate(lobe, w, l / 2, l % 2), recursionDepth);
+                    vertices[baseIndex + 1] = lookup.MeshToSphere(lookup.GetMeshCoordinate(lobe, w + 1, l / 2, l % 2), recursionDepth);
+                    vertices[baseIndex + 2] = lookup.MeshToSphere(lookup.GetMeshCoordinate(lobe, w, (l / 2) + 1, l % 2), recursionDepth);
+                }
+            }
+        }
+
+        int[] triangles = new int[vertices.Length];
+        for (int i = 0; i < vertices.Length; i++)
+        {
+            //Debug.Log(vertices[i]);
+            triangles[i] = i;
+        }
+
+        mesh.vertices = vertices;
+        mesh.triangles = triangles;
         mesh.RecalculateNormals();
     }
 

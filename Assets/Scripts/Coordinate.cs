@@ -131,13 +131,13 @@ public class CoordinateLookup
         meshY = (meshY << 1) >> 1; // Clear out the top bit of mesh Y
 
         // Make some assertions here
-        if (meshX >= width)
+        if (meshX > width)
         {
             Debug.LogError("Invalid mesh X value in MeshToSphere: " + meshX + " when width is " + width);
             return Vector3.zero;
         }
 
-        if (meshY >= length)
+        if (meshY > length)
         {
             Debug.LogError("Invalid mesh Y value in MeshToSphere: " + meshY + " when length is " + length);
             return Vector3.zero;
@@ -186,10 +186,17 @@ public class CoordinateLookup
         int triangleBaseIndex = icosahedronTriangles[(lobe * 4) + face];
         //Debug.Log("Triangle base index: " + triangleBaseIndex);
 
+        Vector3 v1 = icosahedronVertices[icosahedronTriangles[triangleBaseIndex + 0]];
+        Vector3 v2 = icosahedronVertices[icosahedronTriangles[triangleBaseIndex + 1]];
+        Vector3 v3 = icosahedronVertices[icosahedronTriangles[triangleBaseIndex + 2]];
+
         // Here, we have to get relative mesh coordinates (convert them to the range [0,1])
         // This is based on the parity of the face variable (flipped if face is odd)
+        float relativeX = (float)meshX / width;
+        float relativeY = (float)meshY / width;
 
-        return Vector3.zero;
+        Debug.Log("Returning: " + (Vector3.Lerp(v1, v2, relativeX) + Vector3.Lerp(v1, v3, relativeY)));
+        return Vector3.Lerp(v1, v2, relativeX) + Vector3.Lerp(v1, v3, relativeY);
     }
 
     /*
