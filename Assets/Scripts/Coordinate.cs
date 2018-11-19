@@ -5,8 +5,8 @@ using UnityEngine;
 public class CoordinateLookup
 {
 
-    private static Vector3[] icosahedronVertices;
-    private static int[] icosahedronTriangles;
+    public static Vector3[] icosahedronVertices;
+    public static int[] icosahedronTriangles;
 
     public CoordinateLookup() {
         float s = (float)System.Math.Sqrt((5.0 - System.Math.Sqrt(5.0)) / 10.0);
@@ -97,6 +97,11 @@ public class CoordinateLookup
     //3, 6, 8, // 4 (face 5)
     //3, 8, 9, // 4 (face 1)
 
+    public Vector2Int GetMeshCoordinate(int lobe, int width, int height, int parity)
+    {
+        return new Vector2Int((lobe << 29) | width, (parity << 31) | height);
+    }
+
     /*
      * top 3 bits of mesh.x is the lobe (5 values)
      * rest of mesh.x is the width
@@ -111,41 +116,78 @@ public class CoordinateLookup
      * 
      * For now, x/y are mesh coordinate and z is lobe info.
      */
-    public Vector3 MeshToSphere(Vector3 meshCoordinate, int recursionDepth) 
+    public Vector3 MeshToSphere(Vector2Int meshCoordinate, int recursionDepth) 
     {
         int width = (int)Mathf.Pow(2, recursionDepth);
         int length = 4 * width;
 
-        int meshX = (int)meshCoordinate.x; // width
-        int meshY = (int)meshCoordinate.y; // length
-        int lobe = (int)meshCoordinate.z;
+        int meshX = meshCoordinate.x; // width
+        int meshY = meshCoordinate.y; // length
 
-        int topTriangle = 0; // TODO pull this from the meshY top bit
+        int lobe = 7 & meshX >> 29; // Top 3 bits of mesh X is lobe. The "7 &" part removes the sign bit.
+        int parity = 1 & (meshY >> 31); // Top bit of mesh Y is parity bit. The "1 &" part removes the sign bit.
 
-        //int face = (int)((float)meshY / length);
+        meshX = (meshX << 3) >> 3; // Clear out the top 3 bits of mesh X
+        meshY = (meshY << 1) >> 1; // Clear out the top bit of mesh Y
+
+        // Make some assertions here
+        if (meshX >= width)
+        {
+            Debug.LogError("Invalid mesh X value in MeshToSphere: " + meshX + " when width is " + width);
+            return Vector3.zero;
+        }
+
+        if (meshY >= length)
+        {
+            Debug.LogError("Invalid mesh Y value in MeshToSphere: " + meshY + " when length is " + length);
+            return Vector3.zero;
+        }
+
+        if (lobe >= 5)
+        {
+            Debug.LogError("Invalid lobe value in MeshToSphere: " + lobe + " when lobe should be in range [0, 4].");
+            return Vector3.zero;
+        }
+
+        Debug.Log("Mesh x: " + meshX + " mesh y: " + meshY + " lobe: " + lobe + " parity: " + parity + " Length: " + length);
+
         int face;
 
-        // Are we in the first or second half of the stripe?
-        if ((float)meshY / length > 0.5f)
+        // Face 0 or 1
+        if (meshY < (length / 2f))
         {
-            face = 2;
-        }
-        else
-        {
-            // First half. So check which triangle we're in here.
-            // The split line is x = y. 
-            face = 0;
-            if ((2 * (meshX + meshY)) + topTriangle > width * 2)
+            // We're on the first half; face 0
+            if ((2 * meshX) + meshY + parity < length / 2f)
             {
-
+                face = 0;
+            }
+            // Second half; face 1
+            else
+            {
+                face = 1;
             }
         }
+        // Face 2 or 3
+        else
+        {
+            // We're on the first half; face 2
+            if ((2 * meshX) + meshY + parity < length)
+            {
+                face = 2;
+            }
+            // Second half; face 3
+            else
+            {
+                face = 3;
+            }
+        }
+        Debug.Log("Face: " + face);
 
         int triangleBaseIndex = icosahedronTriangles[(lobe * 4) + face];
-        Debug.Log("Triangle base index: " + triangleBaseIndex);
+        //Debug.Log("Triangle base index: " + triangleBaseIndex);
 
-        // TODO need "side" info; are we asking for the top or bottom triangle in the square mesh coordinate?
-
+        // Here, we have to get relative mesh coordinates (convert them to the range [0,1])
+        // This is based on the parity of the face variable (flipped if face is odd)
 
         return Vector3.zero;
     }

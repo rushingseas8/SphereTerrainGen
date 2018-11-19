@@ -10,7 +10,7 @@ public class GameManager : MonoBehaviour {
 	void Start () {
         coordinate = new CoordinateLookup();
 
-        Debug.Log("Sphere lookup: " + coordinate.MeshToSphere(new Vector3(0, 2, 0), 0));
+        Debug.Log("Sphere lookup: " + coordinate.MeshToSphere(coordinate.GetMeshCoordinate(0, 0, 3, 1), 0));
 	}
 	
 	// Update is called once per frame

@@ -25,86 +25,60 @@ public class GenerateIcosphere2 : MonoBehaviour {
             return;
         }
 
-        //int width = (int)Mathf.Pow(2, recursionDepth);
-        int width = 1;
+        int width = (int)Mathf.Pow(2, recursionDepth);
         int length = 4 * (int)Mathf.Pow(2, recursionDepth);
 
         int scaleFactor = (int)Mathf.Pow(2, recursionDepth);
 
+        /*
+         * Four cases, based on the initial one of the four faces we're in.
+         * 
+         * Condition 1: l < length / 2
+         *  Condition 2: w + l + parity < length / 2
+         *      -> Face 0
+         *  else
+         *      -> Face 1
+         * else
+         *  Condition 2: w + (l - (length / 2)) + parity < length / 2
+         *      -> Face 2
+         *  else
+         *      -> Face 3
+         * 
+         * TODO: it would be better to iterate using this algorithm, but it requires
+         * a lot of tricky any annoying math.
+         */
+
         Vector3[] vertices = new Vector3[3 * width * length];
+        // We iterate over the rhombuses, not the triangles.
         for (int w = 0; w < width; w++) 
         {
             for (int l = 0; l < length / 2; l++) 
             {
                 //int baseIndex = 6 * ((w * length) + l);
-                int baseIndex = (w * 3 * 4 * width) + (6 * l);
+                //int baseIndex = (w * 3 * 4 * width) + (6 * l);
+                int rhombusBaseIndex = 6 * (w * length) + l;
 
-                /*
-                 *   2/3       4
-                 *     ________
-                 *    /\      /
-                 *   /  \    / 
-                 *  /    \  /
-                 * /______\/
-                 * 0      1/5
-                 * 
-                 * Note that each triangle is equilateral with side length 1.
-                 */
+                // Parity bit.
+                for (int p = 0; p < 2; p++)
+                {
+                    int vertexBaseIndex = 3 * ((w * length) + l + p);
 
-                float rowOffset = (0.5f * w);
-                //float rowOffset = 0f;
+                    if (l < length / 2)
+                    {
+                        if (w + l + p < length / 2) {
+                            Vector3 v1 = CoordinateLookup.icosahedronVertices[0];
+                            Vector3 v2 = CoordinateLookup.icosahedronVertices[1];
+                            Vector3 v3 = CoordinateLookup.icosahedronVertices[2];
 
-                vertices[baseIndex + 0] = new Vector3(w, 0, rowOffset + l) / scaleFactor;
-                vertices[baseIndex + 1] = new Vector3(w, 0, rowOffset + l + 1f) / scaleFactor;
-                vertices[baseIndex + 2] = new Vector3(w + 1f, 0, rowOffset + l + 0.5f) / scaleFactor;
+                            float widthScale = (float)w / width;
+                            float lengthScale = (float)l / (length / 2);
 
-                vertices[baseIndex + 3] = new Vector3(w + 1f, 0, rowOffset + l + 0.5f) / scaleFactor;
-                vertices[baseIndex + 4] = new Vector3(w + 1f, 0, rowOffset + l + 1.5f) / scaleFactor;
-                vertices[baseIndex + 5] = new Vector3(w, 0, rowOffset + l + 1f) / scaleFactor;
+                            vertices[vertexBaseIndex + 0] = Vector3.Lerp(v1, v2, widthScale);
+                        }
+                    }
+                }
             }
         }
-
-        /*
-        for (int i = 0; i < vertices.Length; i += 6) 
-        {
-            //float angle = Mathf.PI * ((float)i / vertices.Length) / 2.0f;
-
-            Vector3 baseVector = vertices[i];
-            for (int j = 0; j < 6; j++)
-            {
-                Vector3 input = vertices[i + j];
-                Vector3 difference = input - baseVector;
-
-
-                float angle = Mathf.PI * ((float)(i + j) / vertices.Length);
-
-                //vertices[i + j] = new Vector3(0, Mathf.Cos(angle), Mathf.Sin(angle));
-                vertices[i + j] = (new Vector3(0, 1, 0) + input).normalized;
-            }
-        }
-        */
-
-        /*
-        for (int i = 0; i < vertices.Length; i++)
-        {
-            float zDistance = Mathf.PI * vertices[i].z / 2.5f;
-            vertices[i] = new Vector3(Mathf.Cos(Mathf.PI * ((float)i / vertices.Length) * (Mathf.Deg2Rad * 9f)), Mathf.Cos(zDistance), Mathf.Sin(zDistance));
-        }
-        */
-
-        /*
-         * Algorithm for computing positions of triangles.
-         * (non-subdivided)
-         * Position first triangle correctly.
-         * for i from 1 to n - 1:
-         *   Grab the edge between i and i-1
-         *   Rotate using dihedral angle (138.19 degrees) [likely 180 - 138.19 for 
-         *      this approach] about the edge
-         * 
-         * (subdivided)
-         * Position initial row of triangles correctly
-         * As above, but new dihedral angle is generated (compute?)
-         */
 
         int[] triangles = new int[3 * width * length];
         for (int w = 0; w < width; w++) 

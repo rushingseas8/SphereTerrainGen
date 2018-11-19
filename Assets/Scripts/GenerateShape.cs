@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+using UnityEngine.Profiling;
+
 [ExecuteInEditMode]
 public class GenerateShape : MonoBehaviour {
 
@@ -171,7 +173,7 @@ public class GenerateShape : MonoBehaviour {
             }
             else
             {
-                Generator.SubdivideNotSharedOrdered(mesh);
+                Generator.SubdivideNotSharedOrdered(mesh, recursionDepth);
             }
         }
         vertices = new List<Vector3>(mesh.vertices);
@@ -217,36 +219,36 @@ public class GenerateShape : MonoBehaviour {
             new Vector3(0, s, t),
             new Vector3(s, t, 0),
 
+            new Vector3(0, s, t),
             new Vector3(s, t, 0),
-            new Vector3(t, 0, s), // Swap
-            new Vector3(0, s, t), // Swap
+            new Vector3(t, 0, s),
+            
+            new Vector3(s, t, 0),
+            new Vector3(t, 0, s),
+            new Vector3(t, 0, -s),
 
             new Vector3(t, 0, s),
             new Vector3(t, 0, -s),
-            new Vector3(s, t, 0),
-
             new Vector3(s, -t, 0),
-            new Vector3(t, 0, s),  // Swap
-            new Vector3(t, 0, -s), // Swap
             #endregion
 
-            /*
             #region Lobe 2: towards +z (slightly towards -x)
             new Vector3(-s, t, 0),
             new Vector3(-t, 0, s),
             new Vector3(0, s, t),
 
+            new Vector3(-t, 0, s),
             new Vector3(0, s, t),
-            new Vector3(0, -s, t), // Swap
-            new Vector3(-t, 0, s), // Swap
+            new Vector3(0, -s, t),
 
-            new Vector3(s, -t, 0),
+
+            new Vector3(0, s, t),
+            new Vector3(0, -s, t),
             new Vector3(t, 0, s),
-            new Vector3(0, -s, t),
 
             new Vector3(0, -s, t),
-            new Vector3(0, s, t), // Swap
-            new Vector3(t, 0, s), // Swap
+            new Vector3(t, 0, s),
+            new Vector3(s, -t, 0),
             #endregion
 
             #region Lobe 3: towards -x
@@ -254,17 +256,17 @@ public class GenerateShape : MonoBehaviour {
             new Vector3(-t, 0, -s),
             new Vector3(-t, 0, s),
 
-            new Vector3(-t, 0, s),
-            new Vector3(-s, -t, 0),
             new Vector3(-t, 0, -s),
-
-            new Vector3(-s, -t, 0),
-            new Vector3(0, -s, t),
             new Vector3(-t, 0, s),
+            new Vector3(-s, -t, 0),
 
-            new Vector3(s, -t, 0),
+            new Vector3(-t, 0, s),
             new Vector3(-s, -t, 0),
             new Vector3(0, -s, t),
+
+            new Vector3(-s, -t, 0),
+            new Vector3(0, -s, t),
+            new Vector3(s, -t, 0),
             #endregion
 
             #region Lobe 4: towards -z (slightly towards -x)
@@ -272,17 +274,17 @@ public class GenerateShape : MonoBehaviour {
             new Vector3(0, s, -t),
             new Vector3(-t, 0, -s),
 
+            new Vector3(0, s, -t),  
             new Vector3(-t, 0, -s),
-            new Vector3(0, -s, -t), // Swapped
-            new Vector3(0, s, -t),  // Swapped
+            new Vector3(0, -s, -t), 
+
+            new Vector3(-t, 0, -s),
+            new Vector3(0, -s, -t),
+            new Vector3(-s, -t, 0),
 
             new Vector3(0, -s, -t),
             new Vector3(-s, -t, 0),
-            new Vector3(-t, 0, -s),
-
             new Vector3(s, -t, 0),
-            new Vector3(0, -s, -t), // Swapped
-            new Vector3(-s, -t, 0), // Swapped
             #endregion
 
             #region Lobe 5: towards +x, -z
@@ -290,20 +292,18 @@ public class GenerateShape : MonoBehaviour {
             new Vector3(s, t, 0),
             new Vector3(0, s, -t),
 
+            new Vector3(s, t, 0),  
             new Vector3(0, s, -t),
-            new Vector3(t, 0, -s), // Swapped
-            new Vector3(s, t, 0),  // Swapped
+            new Vector3(t, 0, -s), 
 
+            new Vector3(0, s, -t),
             new Vector3(t, 0, -s),
             new Vector3(0, -s, -t),
-            new Vector3(0, s, -t),
 
+            new Vector3(t, 0, -s),  
+            new Vector3(0, -s, -t), 
             new Vector3(s, -t, 0),
-            new Vector3(t, 0, -s),  // Swapped
-            new Vector3(0, -s, -t), // Swapped
-
             #endregion
-            */
         };
 
         float angle = Mathf.Rad2Deg * Mathf.Acos(1.0f / (2.0f * Mathf.Sin(2f * Mathf.PI / 5f)));
@@ -320,7 +320,7 @@ public class GenerateShape : MonoBehaviour {
         }
 
         // Triangles are generated with the last two vertices flipped, so every face faces outwards.
-        int[] triangles = new int[12];
+        int[] triangles = new int[60];
         for (int i = 0; i < triangles.Length; i += 6)
         {
             triangles[i + 0] = i + 0;
@@ -345,47 +345,81 @@ public class GenerateShape : MonoBehaviour {
             }
             else
             {
-                Generator.SubdivideNotSharedOrdered(mesh);
+                Generator.SubdivideIcosahedron(mesh, recur);
             }
         }
         // Update the vertices and triangles, since we subdivided
         vertices = mesh.vertices;
         triangles = mesh.triangles;
 
+        //Generator.SortByBottomLeft(ref vertices, ref triangles);
+
         // UV pass
         Vector2[] uvs = new Vector2[vertices.Length];
-        /*
-        for (int i = 0; i < triangles.Length; i += 6)
-        {
-            uvs[triangles[i + 0]] = new Vector2(0, 1);
-            uvs[triangles[i + 1]] = new Vector2(1, 1);
-            uvs[triangles[i + 2]] = new Vector2(0, 0);
+        //for (int i = 0; i < triangles.Length; i += 6)
+        //{
+        //    uvs[triangles[i + 0]] = new Vector2(0, 1);
+        //    uvs[triangles[i + 1]] = new Vector2(1, 1);
+        //    uvs[triangles[i + 2]] = new Vector2(0, 0);
 
-            uvs[triangles[i + 3]] = new Vector2(1, 0);
-            uvs[triangles[i + 4]] = new Vector2(0, 0);
-            uvs[triangles[i + 5]] = new Vector2(1, 1);
-        }
-        */
+        //    uvs[triangles[i + 3]] = new Vector2(1, 0);
+        //    uvs[triangles[i + 4]] = new Vector2(0, 0);
+        //    uvs[triangles[i + 5]] = new Vector2(1, 1);
+        //}
 
         // Debug to see the mesh coordinates more clearly.
         int width = (int)Mathf.Pow(2, recursionDepth);
         int length = 4 * width;
-        Debug.Log("Width: " + width);
-        for (int w = 0; w < width; w++) {
-            for (int l = 0; l < length / 2; l++) {
-                //int basePos = (w * length) + l;
-                int baseIndex = (w * 3 * 4 * width) + (6 * l);
+        //Debug.Log("Going from 0 to " + (3 * width * length) + ". Vertices: " + vertices.Length);
+        for (int lobe = 0; lobe < 5; lobe++)
+        {
+            for (int w = 0; w < width; w++)
+            {
+                for (int l = 0; l < length; l++)
+                {
+                    int basePos = 3 * ((w * length) + l) + (int)(lobe * vertices.Length / 5f);
 
-                Debug.Log(baseIndex);
-                if ((float)l / length >= 0.5f)
-                {
-                    Debug.Log("True!");
-                    uvs[baseIndex] = new Vector2(0, 0);
-                }
-                else
-                {
-                    Debug.Log("False!");
-                    uvs[baseIndex] = new Vector2(1, 1);
+                    int p = l % 2;
+                    // Face 0 or 1
+                    if (l < (length / 2f))
+                    {
+                        // We're on the first half; face 0
+                        if ((2 * w) + l + p < length / 2f)
+                        {
+                            uvs[basePos + 0] = new Vector2(0, 0);
+                            uvs[basePos + 1] = new Vector2(0, 1);
+                            uvs[basePos + 2] = new Vector2(1, 1);
+                        }
+                        // Second half; face 1
+                        else
+                        {
+                            uvs[basePos + 0] = new Vector2(0, 0);
+                            uvs[basePos + 1] = new Vector2(0, 1);
+                            uvs[basePos + 2] = new Vector2(1, 0);
+                        }
+                    }
+                    // Face 2 or 3
+                    else
+                    {
+                        // We're on the first half; face 2
+                        if ((2 * w) + l + p < length)
+                        {
+                            uvs[basePos + 0] = new Vector2(0, 0);
+                            uvs[basePos + 1] = new Vector2(0, 1);
+                            uvs[basePos + 2] = new Vector2(1, 1);
+                        }
+                        // Second half; face 3
+                        else
+                        {
+                            uvs[basePos + 0] = new Vector2(0, 0);
+                            uvs[basePos + 1] = new Vector2(0, 1);
+                            uvs[basePos + 2] = new Vector2(1, 0);
+                        }
+                    }
+
+                    //uvs[basePos + 0] = new Vector2((float)w / width, (float)l / length);
+                    //uvs[basePos + 1] = new Vector2((float)w / width, (float)l / length);
+                    //uvs[basePos + 2] = new Vector2((float)w / width, (float)l / length);
                 }
             }
         }
@@ -408,16 +442,16 @@ public class GenerateShape : MonoBehaviour {
     {
         Vector3[] vertices = {
             new Vector3(0, 0, 0),
-            new Vector3(1, 0, 0),
             new Vector3(0.5f, 0, 1),
+            new Vector3(1, 0, 0),
 
             new Vector3(0.5f, 0, 1),
+            new Vector3(1, 0, 0),
             new Vector3(1.5f, 0, 1),
-            new Vector3(1, 0, 0)
         };
 
         int[] triangles = {
-            0, 2, 1, 3, 4, 5
+            0, 1, 2, 3, 5, 4
         };
 
         mesh.vertices = vertices;
@@ -432,12 +466,30 @@ public class GenerateShape : MonoBehaviour {
             }
             else
             {
-                Generator.SubdivideNotSharedOrdered(mesh);
+                Generator.SubdivideNotSharedOrdered(mesh, i);
             }
         }
         vertices = mesh.vertices;
         triangles = mesh.triangles;
 
+        // Debug UVs so we can see the order of the vertices.
+        int width = (int)Mathf.Pow(2, recursionDepth);
+        int length = 2 * width;
+
+        Vector2[] uvs = new Vector2[vertices.Length];
+        for (int w = 0; w < width; w++)
+        {
+            for (int l = 0; l < length; l++)
+            {
+                int basePos = 3 * ((w * length) + l);
+
+                uvs[basePos + 0] = new Vector2((float)w / width, (float)l / length);
+                uvs[basePos + 1] = new Vector2((float)w / width, (float)l / length);
+                uvs[basePos + 2] = new Vector2((float)w / width, (float)l / length);
+            }
+        }
+
+        /*
         // Generate UVs (changes depending on if we're using the seamless or not)
         Vector2[] uvs = new Vector2[vertices.Length];
         if (seamless)
@@ -466,6 +518,7 @@ public class GenerateShape : MonoBehaviour {
                 uvs[triangles[i + 2]] = new Vector2(0.5f, 1);
             }
         }
+         */
 
         mesh.uv = uvs;
 
