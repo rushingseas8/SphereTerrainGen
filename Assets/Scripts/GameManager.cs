@@ -10,7 +10,10 @@ public class GameManager : MonoBehaviour {
 	void Start () {
         coordinate = new CoordinateLookup();
 
-        Debug.LogError("Sphere lookup: " + coordinate.MeshToSphere(coordinate.GetMeshCoordinate(0, 0, 8, 0), 2));
+        //Debug.LogError("Sphere lookup: " + coordinate.MeshToSphere(coordinate.GetMeshCoordinate(0, 0, 8, 0), 2));
+
+        //Perlin perlin = new Perlin();
+        //Debug.Log("GPU Perlin: " + perlin.GetValueShader(new Vector3(0, 0, 0)));
 	}
 	
 	// Update is called once per frame

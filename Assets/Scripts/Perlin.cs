@@ -12,6 +12,13 @@ public class Perlin
     protected float xOffset;
     protected float zOffset;
 
+    private ComputeShader compute;
+    private int kernelIndex = -1;
+
+
+    private ComputeBuffer inputBuffer;
+    private ComputeBuffer outputBuffer;
+
     public Perlin(float xOffset = 0.0f, float zOffset = 0.0f, int octaves = 8, float frequency = 1.0f, float lacunarity = 2.0f, float persistence = 0.5f)
     {
         this.xOffset = xOffset;
@@ -37,6 +44,52 @@ public class Perlin
             z *= lacunarity;
         }
         return value;
+    }
+
+    private static bool done = false;
+
+    public float[] GetValueShader(Vector3[] input)
+    {
+        if (done) {
+            return null;
+        }
+
+        if (compute == null)
+        {
+            kernelIndex = compute.FindKernel("Perlin3D");
+
+            compute = Resources.Load<ComputeShader>("Shaders/Perlin3D");
+
+            inputBuffer = new ComputeBuffer(input.Length, 12);
+            outputBuffer = new ComputeBuffer(input.Length, 4);
+
+            compute.SetBuffer(kernelIndex, "Input", inputBuffer);
+            compute.SetBuffer(kernelIndex, "Result", outputBuffer);
+        }
+
+        float[] outputArray = new float[input.Length];
+
+        int numFinished = 0;
+
+        int parallel = 128;
+        while (numFinished < input.Length)
+        {
+            Debug.Log("Finished " + numFinished);
+
+            // Load in the input Vector3s
+            inputBuffer.SetData(input, numFinished, numFinished, parallel);
+            compute.Dispatch(kernelIndex, (input.Length / parallel), 1, 1);
+
+            //Vector3[] result = new Vector3[1024];
+            outputBuffer.GetData(outputArray, numFinished, numFinished, parallel);
+            numFinished += parallel;
+        }
+
+        inputBuffer.Release();
+        outputBuffer.Release();
+
+        //done = true;
+        return outputArray;
     }
 
     public float GetNormalizedValue(float x, float z)

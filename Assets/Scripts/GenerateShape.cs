@@ -54,6 +54,12 @@ public class GenerateShape : MonoBehaviour {
     [Range(1, 8)]
     private int octaves = 1;
 
+    [SerializeField]
+    private int seed;
+
+    [SerializeField]
+    private bool perlinOnGPU = false;
+
     private GameObject obj;
 
     public enum Shape
@@ -71,7 +77,11 @@ public class GenerateShape : MonoBehaviour {
             return;
         }
 
+        Profiler.BeginSample("Creating new mesh object");
         Mesh mesh = new Mesh();
+        Profiler.EndSample();
+
+        Profiler.BeginSample("Data generation");
         switch (shape)
         {
             case Shape.CUBE: GenerateCube(mesh); break;
@@ -81,7 +91,9 @@ public class GenerateShape : MonoBehaviour {
             case Shape.ICOSPHERE2: GenerateIcosphere2(mesh); break;
             default: GenerateIcosphere(mesh); break;
         }
+        Profiler.EndSample();
 
+        Profiler.BeginSample("Object generation");
         if (obj != null) 
         {
             DestroyImmediate(obj);
@@ -89,7 +101,9 @@ public class GenerateShape : MonoBehaviour {
 
         obj = Generator.GenerateObject(mesh);
         obj.transform.localScale = Mathf.Pow(10f, logScale) * Vector3.one;
+        Profiler.EndSample();
 
+        Profiler.BeginSample("Debug UV generation");
         if (debugUvs)
         {
             obj.GetComponent<MeshRenderer>().material = Resources.Load<Material>("Materials/Debug");
@@ -105,6 +119,7 @@ public class GenerateShape : MonoBehaviour {
                 obj.GetComponent<MeshRenderer>().material = Resources.Load<Material>("Materials/Grass");
             }
         }
+        Profiler.EndSample();
     }
 
     private void GenerateCube(Mesh mesh)
@@ -440,6 +455,7 @@ public class GenerateShape : MonoBehaviour {
         mesh.RecalculateNormals();
     }
 
+    // Generates an icosphere iteratively using a mesh -> sphere conversion.
     private void GenerateIcosphere2(Mesh mesh)
     {
         int width = (int)Mathf.Pow(2, recursionDepth);
@@ -447,89 +463,50 @@ public class GenerateShape : MonoBehaviour {
 
         CoordinateLookup lookup = new CoordinateLookup();
 
+        Profiler.BeginSample("Vertex generation");
         Vector3[] vertices = new Vector3[5 * 3 * width * length];
-        //for (int lobe = 0; lobe < 1; lobe++)
-        //{
-        //    for (int w = 0; w < width; w++)
-        //    {
-        //        for (int l = 0; l < length; l += 2)
-        //        {
-        //            int baseIndex = 3 * ((w * length) + l) + (int)(lobe * vertices.Length / 5f);
-        //            //Debug.Log("Base index: " + baseIndex);
-
-        //            int halfL = l / 2;
-
-        //            vertices[baseIndex + 0] = lookup.MeshToSphere(lookup.GetMeshCoordinate(lobe, w, halfL, 0), recursionDepth);
-        //            vertices[baseIndex + 1] = lookup.MeshToSphere(lookup.GetMeshCoordinate(lobe, w + 1, halfL, 0), recursionDepth);
-        //            vertices[baseIndex + 2] = lookup.MeshToSphere(lookup.GetMeshCoordinate(lobe, w, halfL + 1, 0), recursionDepth);
-
-        //            vertices[baseIndex + 3] = lookup.MeshToSphere(lookup.GetMeshCoordinate(lobe, w + 1, halfL, 1), recursionDepth);
-        //            vertices[baseIndex + 4] = lookup.MeshToSphere(lookup.GetMeshCoordinate(lobe, w, halfL + 1, 1), recursionDepth);
-        //            vertices[baseIndex + 5] = lookup.MeshToSphere(lookup.GetMeshCoordinate(lobe, w + 1, halfL + 1, 1), recursionDepth);
-
-        //            //vertices[baseIndex + 0] = new Vector3(w, halfL);
-        //            //vertices[baseIndex + 1] = new Vector3(w + 1, halfL);
-        //            //vertices[baseIndex + 2] = new Vector3(w, halfL + 1);
-
-        //            //vertices[baseIndex + 3] = new Vector3(w + 1, halfL);
-        //            //vertices[baseIndex + 4] = new Vector3(w, halfL + 1);
-        //            //vertices[baseIndex + 5] = new Vector3(w + 1, halfL + 1);
-        //        }
-        //    }
-        //}
-
         for (int lobe = 0; lobe < 5; lobe++)
         {
             for (int w = 0; w < width; w++)
             {
                 for (int l = 0; l < length; l++)
                 {
-                    int baseIndex = 3 * ((w * length) + l) + (int)(lobe * vertices.Length / 5f);
-                    //Debug.Log("Base index: " + baseIndex);
-
-                    //int halfL = l / 2;
-                    //int parity = l % 2;
-
-                    //if (parity == 0)
-                    //{
-                    //    vertices[baseIndex + 0] = lookup.MeshToSphere(lookup.GetMeshCoordinate(lobe, w, l, parity), recursionDepth);
-                    //    vertices[baseIndex + 1] = lookup.MeshToSphere(lookup.GetMeshCoordinate(lobe, w + 1, halfL, parity), recursionDepth);
-                    //    vertices[baseIndex + 2] = lookup.MeshToSphere(lookup.GetMeshCoordinate(lobe, w, halfL + 1, parity), recursionDepth);
-                    //}
-                    //else
-                    //{
-                    //    vertices[baseIndex + 0] = lookup.MeshToSphere(lookup.GetMeshCoordinate(lobe, w + 1, halfL, parity), recursionDepth);
-                    //    vertices[baseIndex + 1] = lookup.MeshToSphere(lookup.GetMeshCoordinate(lobe, w, halfL + 1, parity), recursionDepth);
-                    //    vertices[baseIndex + 2] = lookup.MeshToSphere(lookup.GetMeshCoordinate(lobe, w + 1, halfL + 1, parity), recursionDepth);
-                    //}
-
+                    int baseIndex = 3 * ((w * length) + l) + (lobe * vertices.Length / 5);
 
                     vertices[baseIndex + 0] = lookup.MeshToSphere(lookup.GetMeshCoordinate(lobe, w, l, 0), recursionDepth);
                     vertices[baseIndex + 1] = lookup.MeshToSphere(lookup.GetMeshCoordinate(lobe, w, l, 1), recursionDepth);
                     vertices[baseIndex + 2] = lookup.MeshToSphere(lookup.GetMeshCoordinate(lobe, w, l, 2), recursionDepth);
-
-                    //vertices[baseIndex + 0] = new Vector3(w, l);
-                    //vertices[baseIndex + 1] = new Vector3(w + 1, l);
-                    //vertices[baseIndex + 2] = new Vector3(w, l + 1);
-
-                    //if (parity == 0)
-                    //{
-                    //    vertices[baseIndex + 0] = new Vector3(w, halfL);
-                    //    vertices[baseIndex + 1] = new Vector3(w + 1, halfL);
-                    //    vertices[baseIndex + 2] = new Vector3(w, halfL + 1);
-                    //} else 
-                    //{
-                    //    vertices[baseIndex + 0] = new Vector3(w + 1, halfL);
-                    //    vertices[baseIndex + 1] = new Vector3(w, halfL + 1);
-                    //    vertices[baseIndex + 2] = new Vector3(w + 1, halfL + 1);
-                    //}
-
                 }
+            }
+        }
+        Profiler.EndSample();
+
+        Debug.Log("We got " + vertices.Length + " vertices!");
+
+        Profiler.BeginSample("Perlin noise generation");
+
+        if (perlinOnGPU)
+        {
+            Perlin perlin = new Perlin();
+            float[] noise = perlin.GetValueShader(vertices);
+            for (int i = 0; i < vertices.Length; i++)
+            {
+                vertices[i] = (1f + (noise[i] - 0.5f) / 4f) * vertices[i];
+            }
+        }
+        else
+        {
+            Perlin3D perlin = new Perlin3D(seed);
+            for (int i = 0; i < vertices.Length; i++) {
+                float noise = 1f + (perlin.GetValue(vertices[i].x, vertices[i].y, vertices[i].z, 1) - 0.5f) / 4f;
+                vertices[i] = noise * vertices[i];
             }
         }
 
 
+        Profiler.EndSample();
 
+        Profiler.BeginSample("Triangle generation");
         int[] triangles = new int[vertices.Length];
         for (int i = 0; i < vertices.Length; i += 6)
         {
@@ -541,7 +518,9 @@ public class GenerateShape : MonoBehaviour {
             triangles[i + 4] = i + 5;
             triangles[i + 5] = i + 4;
         }
+        Profiler.EndSample();
 
+        Profiler.BeginSample("UV generation");
         Vector2[] uvs = new Vector2[vertices.Length];
         for (int lobe = 0; lobe < 5; lobe++)
         {
@@ -551,55 +530,20 @@ public class GenerateShape : MonoBehaviour {
                 {
                     int basePos = 3 * ((w * length) + l) + (int)(lobe * vertices.Length / 5f);
 
-                    int p = l % 2;
-                    // Face 0 or 1
-                    //if (l < (length / 2f))
-                    //{
-                    //    // We're on the first half; face 0
-                    //    if ((2 * w) + l + p < length / 2f)
-                    //    {
-                    //        uvs[basePos + 0] = new Vector2(0, 0);
-                    //        uvs[basePos + 1] = new Vector2(0, 1);
-                    //        uvs[basePos + 2] = new Vector2(1, 1);
-                    //    }
-                    //    // Second half; face 1
-                    //    else
-                    //    {
-                    //        uvs[basePos + 0] = new Vector2(0, 0);
-                    //        uvs[basePos + 1] = new Vector2(0, 1);
-                    //        uvs[basePos + 2] = new Vector2(1, 0);
-                    //    }
-                    //}
-                    //// Face 2 or 3
-                    //else
-                    //{
-                    //    // We're on the first half; face 2
-                    //    if ((2 * w) + l + p < length)
-                    //    {
-                    //        uvs[basePos + 0] = new Vector2(0, 0);
-                    //        uvs[basePos + 1] = new Vector2(0, 1);
-                    //        uvs[basePos + 2] = new Vector2(1, 1);
-                    //    }
-                    //    // Second half; face 3
-                    //    else
-                    //    {
-                    //        uvs[basePos + 0] = new Vector2(0, 0);
-                    //        uvs[basePos + 1] = new Vector2(0, 1);
-                    //        uvs[basePos + 2] = new Vector2(1, 0);
-                    //    }
-                    //}
-
                     uvs[basePos + 0] = new Vector2((float)w / width, (float)l / length);
                     uvs[basePos + 1] = new Vector2((float)w / width, (float)l / length);
                     uvs[basePos + 2] = new Vector2((float)w / width, (float)l / length);
                 }
             }
         }
+        Profiler.EndSample();
 
+        Profiler.BeginSample("Assigning values to mesh");
         mesh.vertices = vertices;
         mesh.triangles = triangles;
         mesh.uv = uvs;
         mesh.RecalculateNormals();
+        Profiler.EndSample();
     }
 
     private void GenerateRhombus(Mesh mesh)

@@ -202,8 +202,10 @@
     }
      
     // ----------------------------------- 3D -------------------------------------
+    #pragma kernel Perlin3D 
      
-    float snoise(float3 v)
+    [numthreads(1,1,1)]
+    float Perlin3D(uint3 id : SV_DispatchThreadID, float3 vec3D)
     {
         const float2 C = float2(
             0.166666666666666667, // 1/6
@@ -212,8 +214,8 @@
         const float4 D = float4(0.0, 0.5, 1.0, 2.0);
      
     // First corner
-        float3 i = floor( v + dot(v, C.yyy) );
-        float3 x0 = v - i + dot(i, C.xxx);
+        float3 i = floor( vec3D + dot(vec3D, C.yyy) );
+        float3 x0 = vec3D - i + dot(i, C.xxx);
      
     // Other corners
         float3 g = step(x0.yzx, x0.xyz);

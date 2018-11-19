@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Profiling;
 
 public class CoordinateLookup
 {
@@ -8,7 +9,8 @@ public class CoordinateLookup
     public static Vector3[] icosahedronVertices;
     public static int[] icosahedronTriangles;
 
-    public CoordinateLookup() {
+    public CoordinateLookup()
+    {
         float s = (float)System.Math.Sqrt((5.0 - System.Math.Sqrt(5.0)) / 10.0);
         float t = (float)System.Math.Sqrt((5.0 + System.Math.Sqrt(5.0)) / 10.0);
 
@@ -52,63 +54,30 @@ public class CoordinateLookup
             3, 8, 9,
 
             0, 11, 5,
-            //5, 11, 4,
             4, 5, 11,
-            //4, 9, 5,
             5, 4, 9,
             3, 9, 4,
 
             0, 10, 11,
-            //11, 10, 2,
             2, 11, 10,
-            //2, 4, 11,
             11, 2, 4,
             3, 4, 2,
 
             0, 7, 10,
-            //10, 7, 6,
             6, 10, 7,
-            //6, 2, 10,
             10, 6, 2,
             3, 2, 6,
 
             0, 1, 7,
-            //7, 1, 8,
             8, 7, 1,
-            //8, 6, 7,
             7, 8, 6,
             3, 6, 8
         };
     }
 
-
-    // Reference to the triangles and which face/lobe they describe
-    //0, 11, 5, // 1 (face 2)
-    //0, 5, 1, // 1 (face 1)
-    //0, 1, 7, // 1 (face 5)
-    //0, 7, 10, // 1 (face 4)
-    //0, 10, 11, // 1 (face 3)
-
-    //1, 5, 9, // 2 (face 1)
-    //5, 11, 4, // 2 (face 2)
-    //11, 10, 2, // 2 (face 3)
-    //10, 7, 6, // 2 (face 4)
-    //7, 1, 8, // 2 (face 5)
-
-    //4, 9, 5, // 3 (face 2)
-    //2, 4, 11, // 3 (face 3)
-    //6, 2, 10, // 3 (face 4)
-    //8, 6, 7, // 3 (face 5)
-    //9, 8, 1 // 3 (face 1)
-
-    //3, 9, 4, // 4 (face 2)
-    //3, 4, 2, // 4 (face 3)
-    //3, 2, 6, // 4 (face 4)
-    //3, 6, 8, // 4 (face 5)
-    //3, 8, 9, // 4 (face 1)
-
     public Vector2Int GetMeshCoordinate(int lobe, int width, int length, int triangleIndex)
     {
+        Profiler.BeginSample("GetMeshCoordinate");
         Vector2Int toReturn = new Vector2Int((lobe << 29) | width, (triangleIndex << 30) | length);
 
         int meshX = toReturn.x; // width
@@ -125,25 +94,25 @@ public class CoordinateLookup
         Debug.Assert(width == meshX);
         Debug.Assert(length == meshY);
 
+        Profiler.EndSample();
         return toReturn;
     }
 
     /*
      * top 3 bits of mesh.x is the lobe (5 values)
      * rest of mesh.x is the width
-     * top bit of mesh.y is triangle (false is lower, true is upper)
+     * top 2 bits of mesh.y is triangle vertex (0, 1, or 2)
      * rest of mesh.y is the length
      * 
      * Grab the correct stripe of the mesh using lobe info. 
      * Grab the face of the stripe using (mesh.y / totalLength).
      * Within the face, find exact triangle using mesh coordinates.
      * Find exact triangle coordinates using face and coordinates (coordinates give relative position)
-     * normalize triangle coordinates to obtain spherical coordinate. 
-     * 
-     * For now, x/y are mesh coordinate and z is lobe info.
+     * Normalize triangle coordinates to obtain spherical coordinate. 
      */
     public Vector3 MeshToSphere(Vector2Int meshCoordinate, int recursionDepth) 
     {
+        Profiler.BeginSample("MeshToSphere");
         int width = (int)Mathf.Pow(2, recursionDepth);
         int length = 4 * width;
 
@@ -156,7 +125,11 @@ public class CoordinateLookup
         meshX = (meshX << 3) >> 3; // Clear out the top 3 bits of mesh X
         meshY = (meshY << 2) >> 2; // Clear out the top 2 bits of mesh Y
 
+        // We preserve the parity bit. This is needed because the top and bottom triangle in the mesh respond differently
+        // to the "triangleIndex" value. 
         int parity = meshY % 2;
+
+        // Divide the mesh Y by 2. This essentially converts from triangle indices -> rhombus indicies in the mesh.
         meshY /= 2;
 
         // Make some assertions here
@@ -182,8 +155,33 @@ public class CoordinateLookup
             Debug.LogError("Invalid triangle index in MeshToSphere: " + triangleIndex + " when index should be in range [0, 2].");
         }
 
-        //Debug.Log("Mesh x: " + meshX + " mesh y: " + meshY + " lobe: " + lobe + " triangle index: " + triangleIndex + " Length: " + length);
-
+        /*
+         * Figure out which face we're on within this given lobe.
+         * 
+         * If you look at the lobe as a rectangular array, with "meshX" being the height,
+         * and "meshY" being the length, the algorithm below does the following.
+         * 
+         * 1. Determine if we're on the left or right side, by checking if the length
+         * is more or less than the midway point. Normally, in triangle indicies, this
+         * would be "length / 2"; because we shifted to rhombus indices, this becomes 
+         * "length / 4" instead.
+         * 
+         * 2. Within each side, determine which face we're in. The dividing line is
+         * "meshY == meshX", with the parity bit being a tiebreaker. Another way to think
+         * of it is by treating every triangle you move towards the dividing line as incrementing
+         * a counter up by one. Since any movement along the x axis, y axis, or between parity bits
+         * counts this up, we can take the sum "meshX + meshY + parity" to figure out the value.
+         * 
+         * Note that on the right side, since we know meshY > length / 4, we shift our line up by
+         * the value "length / 4" by subtracting that value from meshY.
+         * _____________
+         * |    /|    /|
+         * |   / |   / |
+         * |  /  |  /  |
+         * | /   | /   |
+         * |/____|/____|
+         * 
+         */
         int face;
 
         // Face 0 or 1
@@ -203,8 +201,11 @@ public class CoordinateLookup
         // Face 2 or 3
         else
         {
+            // Normalize the mesh Y to be in the range [0, length / 4] again.
+            meshY -= (length / 4);
+
             // We're on the first half; face 2
-            if (meshX + meshY + parity < length / 2f)
+            if (meshX + meshY + parity < length / 4f)
             {
                 face = 2;
             }
@@ -216,6 +217,10 @@ public class CoordinateLookup
         }
 
         // Compute the offset due to the parity and triangle index.
+        // The top-left corner of a rectangle is the zero point. "triangleIndex" defines
+        // an offset relative to this zero point. The reason why we can't just pass in the raw
+        // meshX and meshY values is because those would otherwise evaluate to being on the wrong face.
+        // Thus, by specifying the base and offset like this, we can compute the correct face first.
         if (parity == 0) {
             if (triangleIndex == 1)
             {
@@ -238,20 +243,10 @@ public class CoordinateLookup
             }
         }
 
-        if (face >= 2) {
-            meshY -= (length / 4);
-        }
-
-        //face = 0;
-        //Debug.Log("Face: " + face);
-
-        //int moduloFace = (face / 2) * 2;
-        //if (face == 1) { face = 0; }
-        //if (face == 2 || face == 3) { face = 1; }
-
+        // Grab the base index of the triangle array, based on the lobe and face.
         int triangleBaseIndex = 3 * ((lobe * 4) + face);
-        //Debug.Log("Triangle base index: " + triangleBaseIndex);
 
+        // Grab the three vertices that make up this face of the icosahedron
         Vector3 v1 = icosahedronVertices[icosahedronTriangles[triangleBaseIndex + 0]];
         Vector3 v2 = icosahedronVertices[icosahedronTriangles[triangleBaseIndex + 1]];
         Vector3 v3 = icosahedronVertices[icosahedronTriangles[triangleBaseIndex + 2]];
@@ -261,14 +256,10 @@ public class CoordinateLookup
         float relativeX = (float)meshX / width;
         float relativeY = (float)meshY / width;
 
-        //Debug.Log("Returning: " + (Vector3.Lerp(v1, v2, relativeX) + Vector3.Lerp(v1, v3, relativeY)).normalized);
-        //Debug.Log("Relative x: " + relativeX + " and relative y: " + relativeY);
-
-        //Debug.Assert(!(face == 2 || face == 3));
-
-        Debug.Log("Face: " + face + " V1: " + v1 + " V2: " + v2 + " V3: " + v3);
-
-
+        // Using the relative mesh coordinates, we compute the offset within this
+        // face of the icosahedron. Because the faces alternate from up and down facing
+        // triangles, we reverse the relative coordinates for every odd face (1 or 3).
+        Vector3 icosahedronVector;
         if (face % 2 == 0)
         {
             Vector3 basis = v1;
@@ -276,9 +267,7 @@ public class CoordinateLookup
             Vector3 baseX = relativeX * (v2 - v1);
             Vector3 baseY = relativeY * (v3 - v1);
 
-            return basis + baseX + baseY;
-            //return (Vector3.Lerp(v1, v2, relativeX) + Vector3.Lerp(v1, v3, relativeY)) / 2f;
-            //return Vector3.Lerp(v1, v2, relativeX) + relativeY * Vector3.right;
+            icosahedronVector = basis + baseX + baseY;
         }
         else {
 
@@ -287,19 +276,12 @@ public class CoordinateLookup
             Vector3 baseX = (1 - relativeX) * (v2 - v1);
             Vector3 baseY = (1 - relativeY) * (v3 - v1);
 
-            return basis + baseX + baseY;
-
-            //return (Vector3.Lerp(v1, v3, relativeX) + Vector3.Lerp(v2, v3, relativeY));
-            //return (Vector3.Lerp(v1, v3, relativeX) + Vector3.Lerp(v2, v3, relativeY)) / 2f;
-
-            // Need to normalize relative X and Y to be 0 at their respective 0 points.
-            //return (Vector3.Lerp(v1, v2, relativeX) + Vector3.Lerp(v1, v3, relativeY));
+            icosahedronVector = basis + baseX + baseY;
         }
 
-        //return (Vector3.Lerp(v1, v2, relativeX) + Vector3.Lerp(v1, v3, relativeY));
-
-        //return (Vector3.Lerp(v1, v3, relativeX) + Vector3.Lerp(v2, v3, relativeY));
-        //return (Vector3.Lerp(v1, v3, relativeX) + Vector3.Lerp(v2, v3, relativeY));
+        // Finally, we normalize the vector to project it to the sphere.
+        Profiler.EndSample();
+        return icosahedronVector.normalized;
     }
 
     /*

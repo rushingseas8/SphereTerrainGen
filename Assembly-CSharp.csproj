@@ -69,8 +69,10 @@
     <Compile Include="Assets\Scripts\GenerateShape.cs" />
     <Compile Include="Assets\Scripts\Generator.cs" />
     <Compile Include="Assets\Scripts\Perlin.cs" />
+    <Compile Include="Assets\Scripts\Perlin3D.cs" />
     <None Include="Assets\Shaders\Perlin.compute" />
     <None Include="Assets\Shaders\TextureArrayShader.shader" />
+    <None Include="Assets\Resources\Shaders\Perlin3D.compute" />
     <None Include="Assets\Shaders\NewSurfaceShader.shader" />
     <None Include="Assets\Shaders\DebugUV.shader" />
     <Reference Include="UnityEditor.StandardEvents">
