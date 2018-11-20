@@ -34,14 +34,14 @@ public static class Generator {
 
         MeshFilter meshFilter = obj.AddComponent<MeshFilter>();
         MeshRenderer meshRenderer = obj.AddComponent<MeshRenderer>();
-        MeshCollider meshCollider = obj.AddComponent<MeshCollider>();
+        //MeshCollider meshCollider = obj.AddComponent<MeshCollider>();
 
         meshFilter.mesh = mesh;
         //meshRenderer.material = new Material(Shader.Find("Diffuse"));
         //meshRenderer.material = Resources.Load<Material>("Materials/Debug");
         meshRenderer.material = Resources.Load<Material>("Materials/Grass");
         //meshRenderer.material = Resources.Load<Material>("Materials/GrassSeamless");
-        meshCollider.sharedMesh = mesh;
+        //meshCollider.sharedMesh = mesh;
 
         obj.transform.position = position;
         obj.transform.rotation = rotation;

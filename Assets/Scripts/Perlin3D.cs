@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Runtime.InteropServices;
 
 /// <summary>
 /// Gradient noise is a smoother variant of coherent noise. Instead of assingning random values to integer points, it assigns random gradient vectros, and interpolates values

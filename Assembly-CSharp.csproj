@@ -78,11 +78,16 @@
     <Compile Include="Assets\ProceduralNoise\Noise\WorleyNoise.cs" />
     <Compile Include="Assets\Scripts\Controller.cs" />
     <Compile Include="Assets\Scripts\Coordinate.cs" />
+    <Compile Include="Assets\Scripts\FastNoise\FastNoise.cs" />
     <Compile Include="Assets\Scripts\GameManager.cs" />
     <Compile Include="Assets\Scripts\GenerateIcosphere2.cs" />
     <Compile Include="Assets\Scripts\GeneratePlane.cs" />
     <Compile Include="Assets\Scripts\GenerateShape.cs" />
     <Compile Include="Assets\Scripts\Generator.cs" />
+    <Compile Include="Assets\Scripts\Marching\IMarching.cs" />
+    <Compile Include="Assets\Scripts\Marching\Marching.cs" />
+    <Compile Include="Assets\Scripts\Marching\MarchingCubes.cs" />
+    <Compile Include="Assets\Scripts\Marching\MarchingTertahedron.cs" />
     <Compile Include="Assets\Scripts\Perlin.cs" />
     <Compile Include="Assets\Scripts\Perlin3D.cs" />
     <None Include="Assets\Shaders\Perlin.compute" />

@@ -559,8 +559,14 @@ public class GenerateShape : MonoBehaviour {
     private void GenerateNoisySphere(Mesh mesh) {
         Perlin3D perlin = new Perlin3D(seed);
         ProceduralNoiseProject.PerlinNoise perlin2 = new ProceduralNoiseProject.PerlinNoise(seed, 1f);
+
+        FastNoise fast = new FastNoise(seed);
+        fast.SetInterp(FastNoise.Interp.Linear);
+
         int size = 1 << recursionDepth;
         int hs = 1 << (recursionDepth - 1);
+
+        Profiler.BeginSample("Generate Perlin noise");
         float[] noise = new float[size * size * size];
         for (int i = 0; i < size; i++)
         {
@@ -569,25 +575,42 @@ public class GenerateShape : MonoBehaviour {
                 for (int k = 0; k < size; k++)
                 {
                     int baseIndex = (i * size * size) + (j * size) + k;
-                    if (((i - hs) * (i - hs)) + ((j - hs) * (j - hs)) + ((k - hs) * (k - hs)) >= hs * hs)
+                    int dist = ((i - hs) * (i - hs)) + ((j - hs) * (j - hs)) + ((k - hs) * (k - hs));
+                    if (dist >= hs * hs)
                     {
-                        noise[baseIndex] = 0f;
+                        // Change the "0.5f -" to "0.5f +" to see the outside shell flipped around.
+                        noise[baseIndex] = 0.5f - Mathf.Sqrt(dist - (hs * hs));
                     }
                     else
                     {
-                        noise[baseIndex] = 0.5f + (2f * perlin.GetValue(i / terrainGenerationScaleX, j / terrainGenerationScaleX, k / terrainGenerationScaleX));
-                        //noise[baseIndex] = 0.5f + (2f * perlin2.Sample3D(i / terrainGenerationScaleX, j / terrainGenerationScaleX, k / terrainGenerationScaleX));
+                        // Perlin3D class
+                        //noise[baseIndex] = 0.5f + (0.5f * perlin.GetValue(i / terrainGenerationScaleX, j / terrainGenerationScaleX, k / terrainGenerationScaleX));
+
+                        // Custom DLL
+                        //noise[baseIndex] = Perlin3D.GetValueFast(i / terrainGenerationScaleX, j / terrainGenerationScaleX, k / terrainGenerationScaleX);
+                        noise[baseIndex] = 0.5f + (0.5f * fast.GetPerlin(i / terrainGenerationScaleX, j / terrainGenerationScaleX, k / terrainGenerationScaleX));
+
+                        // ProceduralNoise library
+                        //noise[baseIndex] = perlin2.Sample3D(i / terrainGenerationScaleX, j / terrainGenerationScaleX, k / terrainGenerationScaleX);
                     }
                     //Debug.Log(noise[baseIndex]);
                 }
             }
         }
+        Profiler.EndSample();
+
+        Profiler.BeginSample("Marching cubes");
 
         MarchingCubesProject.MarchingCubes marching = new MarchingCubesProject.MarchingCubes();
+        //FastMarchingCubes.MarchingCubes marching = new FastMarchingCubes.MarchingCubes();
         List<Vector3> vertices = new List<Vector3>();
         List<int> triangles = new List<int>();
 
         marching.Generate(noise, size, size, size, vertices, triangles);
+        //marching.MarchBlock(noise, size, size, size, vertices, triangles);
+
+        Profiler.EndSample();
+
         mesh.vertices = vertices.ToArray();
         mesh.triangles = triangles.ToArray();
         Debug.Log("Generated " + vertices.Count + " vertices.");
