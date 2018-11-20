@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+using UnityEngine.Rendering;
+
 public class Perlin
 {
 
@@ -46,51 +48,77 @@ public class Perlin
         return value;
     }
 
-    private static bool done = false;
+    private AsyncGPUReadbackRequest request;
+    private static bool isExecuting = false;
 
     public float[] GetValueShader(Vector3[] input)
     {
-        if (done) {
+        if (!isExecuting)
+        {
+            if (compute == null)
+            {
+                compute = Resources.Load<ComputeShader>("Shaders/Perlin3D");
+
+                kernelIndex = compute.FindKernel("Perlin3D");
+
+                inputBuffer = new ComputeBuffer(input.Length, 12);
+                outputBuffer = new ComputeBuffer(input.Length, 4);
+
+                compute.SetBuffer(kernelIndex, "Input", inputBuffer);
+                compute.SetBuffer(kernelIndex, "Result", outputBuffer);
+            }
+
+            float[] outputArray = new float[input.Length];
+
+            int numFinished = 0;
+
+            inputBuffer.SetData(input);
+
+            int parallel = 128;
+            while (numFinished < input.Length)
+            {
+                //Debug.Log("Finished " + numFinished);
+
+                // Load in the input Vector3s
+                //inputBuffer.SetData(input, numFinished, numFinished, parallel);
+                compute.Dispatch(kernelIndex, (input.Length / parallel), 1, 1);
+
+                //Vector3[] result = new Vector3[1024];
+                numFinished += parallel;
+            }
+
+
+            //outputBuffer.GetData(outputArray);
+            request = AsyncGPUReadback.Request(outputBuffer);
+            isExecuting = true;
             return null;
         }
-
-        if (compute == null)
+        else
         {
-            compute = Resources.Load<ComputeShader>("Shaders/Perlin3D");
+            // oi m8 hurry up
+            request.Update();
 
-            kernelIndex = compute.FindKernel("Perlin3D");
+            if (request.done)
+            {
+                if (request.hasError)
+                {
+                    Debug.LogError("Failed to transfer data from GPU to CPU!");
+                    return null;
+                } else {
 
-            inputBuffer = new ComputeBuffer(input.Length, 12);
-            outputBuffer = new ComputeBuffer(input.Length, 4);
+                    float[] toReturn = request.GetData<float>().ToArray();
 
-            compute.SetBuffer(kernelIndex, "Input", inputBuffer);
-            compute.SetBuffer(kernelIndex, "Result", outputBuffer);
+                    inputBuffer.Release();
+                    outputBuffer.Release();
+
+                    return toReturn;
+                }
+            } else {
+                // Not done yet!
+                return null;
+            }
         }
 
-        float[] outputArray = new float[input.Length];
-
-        int numFinished = 0;
-
-        int parallel = 128;
-        while (numFinished < input.Length)
-        {
-            //Debug.Log("Finished " + numFinished);
-
-            // Load in the input Vector3s
-            inputBuffer.SetData(input, numFinished, numFinished, parallel);
-            compute.Dispatch(kernelIndex, (input.Length / parallel), 1, 1);
-
-            //Vector3[] result = new Vector3[1024];
-            numFinished += parallel;
-        }
-
-        outputBuffer.GetData(outputArray);
-
-        inputBuffer.Release();
-        outputBuffer.Release();
-
-        //done = true;
-        return outputArray;
     }
 
     public float GetNormalizedValue(float x, float z)

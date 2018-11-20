@@ -57,8 +57,8 @@ public class GenerateShape : MonoBehaviour {
     [SerializeField]
     private int seed;
 
-    [SerializeField]
-    private bool perlinOnGPU = false;
+    //[SerializeField]
+    //private bool perlinOnGPU = false;
 
     private GameObject obj;
 
@@ -68,7 +68,8 @@ public class GenerateShape : MonoBehaviour {
         ICOSPHERE,
         RHOMBUS,
         TERRAIN,
-        ICOSPHERE2
+        ICOSPHERE2,
+        NOISYSPHERE
     }
 	
 	void Update () {
@@ -89,6 +90,7 @@ public class GenerateShape : MonoBehaviour {
             case Shape.RHOMBUS: GenerateRhombus(mesh); break;
             case Shape.TERRAIN: GenerateTerrain(mesh); break;
             case Shape.ICOSPHERE2: GenerateIcosphere2(mesh); break;
+            case Shape.NOISYSPHERE: GenerateNoisySphere(mesh); break;
             default: GenerateIcosphere(mesh); break;
         }
         Profiler.EndSample();
@@ -481,27 +483,35 @@ public class GenerateShape : MonoBehaviour {
         }
         Profiler.EndSample();
 
-        Debug.Log("We got " + vertices.Length + " vertices!");
+        //Debug.Log("We got " + vertices.Length + " vertices!");
 
         Profiler.BeginSample("Perlin noise generation");
 
-        if (perlinOnGPU)
-        {
-            Perlin perlin = new Perlin();
-            float[] noise = perlin.GetValueShader(vertices);
-            for (int i = 0; i < vertices.Length; i++)
-            {
-                vertices[i] = (1f + (noise[i] - 0.5f) / 4f) * vertices[i];
-            }
-        }
-        else
-        {
+        //if (perlinOnGPU)
+        //{
+            //Perlin perlin = new Perlin();
+            //float[] noise = null;
+
+            // TODO make this a coroutine bc asking gpu for data is async
+            //Debug.Log("Smashing GPU for data");
+            //while (noise == null) {
+            //    noise = perlin.GetValueShader(vertices);
+            //}
+            //Debug.Log("Ok done");
+
+            //for (int i = 0; i < vertices.Length; i++)
+            //{
+            //    vertices[i] = (1f + (noise[i] - 0.5f) / 4f) * vertices[i];
+            //}
+        //}
+        //else
+        //{
             Perlin3D perlin = new Perlin3D(seed);
             for (int i = 0; i < vertices.Length; i++) {
                 float noise = 1f + (perlin.GetValue(vertices[i].x, vertices[i].y, vertices[i].z, 1) - 0.5f) / 4f;
                 vertices[i] = noise * vertices[i];
             }
-        }
+        //}
 
 
         Profiler.EndSample();
@@ -544,6 +554,44 @@ public class GenerateShape : MonoBehaviour {
         mesh.uv = uvs;
         mesh.RecalculateNormals();
         Profiler.EndSample();
+    }
+
+    private void GenerateNoisySphere(Mesh mesh) {
+        Perlin3D perlin = new Perlin3D(seed);
+        ProceduralNoiseProject.PerlinNoise perlin2 = new ProceduralNoiseProject.PerlinNoise(seed, 1f);
+        int size = 1 << recursionDepth;
+        int hs = 1 << (recursionDepth - 1);
+        float[] noise = new float[size * size * size];
+        for (int i = 0; i < size; i++)
+        {
+            for (int j = 0; j < size; j++) 
+            {
+                for (int k = 0; k < size; k++)
+                {
+                    int baseIndex = (i * size * size) + (j * size) + k;
+                    if (((i - hs) * (i - hs)) + ((j - hs) * (j - hs)) + ((k - hs) * (k - hs)) >= hs * hs)
+                    {
+                        noise[baseIndex] = 0f;
+                    }
+                    else
+                    {
+                        noise[baseIndex] = 0.5f + (2f * perlin.GetValue(i / terrainGenerationScaleX, j / terrainGenerationScaleX, k / terrainGenerationScaleX));
+                        //noise[baseIndex] = 0.5f + (2f * perlin2.Sample3D(i / terrainGenerationScaleX, j / terrainGenerationScaleX, k / terrainGenerationScaleX));
+                    }
+                    //Debug.Log(noise[baseIndex]);
+                }
+            }
+        }
+
+        MarchingCubesProject.MarchingCubes marching = new MarchingCubesProject.MarchingCubes();
+        List<Vector3> vertices = new List<Vector3>();
+        List<int> triangles = new List<int>();
+
+        marching.Generate(noise, size, size, size, vertices, triangles);
+        mesh.vertices = vertices.ToArray();
+        mesh.triangles = triangles.ToArray();
+        Debug.Log("Generated " + vertices.Count + " vertices.");
+        mesh.RecalculateNormals();
     }
 
     private void GenerateRhombus(Mesh mesh)

@@ -309,22 +309,31 @@ public class Perlin3D
         float xs = x - ix;
         float ys = y - iy;
         float zs = z - iz;
+
         // THEN we can use linear interp to find our value - triliear actually
         float n0 = GetNoise(x, y, z, ix, iy, iz);
         float n1 = GetNoise(x, y, z, ix + 1, iy, iz);
         float ix0 = Mathf.Lerp(n0, n1, xs);
+
         n0 = GetNoise(x, y, z, ix, iy + 1, iz);
         n1 = GetNoise(x, y, z, ix + 1, iy + 1, iz);
+
         float ix1 = Mathf.Lerp(n0, n1, xs);
         float iy0 = Mathf.Lerp(ix0, ix1, ys);
+
         n0 = GetNoise(x, y, z, ix, iy, iz + 1);
         n1 = GetNoise(x, y, z, ix + 1, iy, iz + 1);
+
         ix0 = Mathf.Lerp(n0, n1, xs); // on y=0, z=1 edge
+
         n0 = GetNoise(x, y, z, ix, iy + 1, iz + 1);
         n1 = GetNoise(x, y, z, ix + 1, iy + 1, iz + 1);
+
         ix1 = Mathf.Lerp(n0, n1, xs); // on y=z=1 edge
+
         float iy1 = Mathf.Lerp(ix0, ix1, ys);
-        return Mathf.Lerp(iy0, iy1, zs); // inside cube        }
+
+        return Mathf.Lerp(iy0, iy1, zs); // inside cube
     }
 
     private float frequency = 1f;
