@@ -1,3 +1,5 @@
+//#define PROFILING
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -5,6 +7,7 @@ using System.Collections.Generic;
 using UnityEngine.Profiling;
 
 using UnityEngine;
+
 
 namespace FastMarchingCubes
 {
@@ -88,37 +91,59 @@ namespace FastMarchingCubes
 
         }
 
-        public void MarchBlock(float[] voxels, int width, int height, int depth, IList<Vector3> vertList, IList<int> indexList) 
+        //private static Vector3[] EdgeVertex = new Vector3[12];
+        //private static int[] yw = null;
+        //private static int[] zwh = null;
+        //private static int[] lessThan = null;
+
+        public void MarchBlock(float[] voxels, int width, int height, int depth, IList<Vector3> vertList, IList<int> indexList)
         {
-            //float[] cubes = new float[(width - 1) * (height - 1) * (depth - 1)];
-            //Profiler.BeginSample("Setup");
+#if PROFILING 
+            Profiler.BeginSample("Setup");
+#endif
+
             Vector3[] EdgeVertex = new Vector3[12];
 
             int x, y, z;
             int wh = width * height;
 
+            // TODO this will break if height or width change. 
+            // Cache those values, too, and check if they change as a condition for updating this value.
             int[] yw = new int[height];
             for (int i = 0; i < height; i++) { yw[i] = i * width; }
 
+            // TODO this will break if height or width change. 
+            // Cache those values, too, and check if they change as a condition for updating this value.
             int[] zwh = new int[depth];
             for (int i = 0; i < depth; i++) { zwh[i] = i * wh; }
 
-            //Profiler.EndSample();
+#if PROFILING
+            Profiler.EndSample();
+            Profiler.BeginSample("Less than array");
+#endif
 
-            //Profiler.BeginSample("Less than array");
+            // TODO this breaks if height, width, or depth change.
             int[] lessThan = new int[width * height * depth];
-            for (x = 0; x < width; x++) {
-                for (y = 0; y < height; y++) {
-                    for (z = 0; z < depth; z++) {
+
+            // This can be cached if the voxel array is the same; in actual use cases it shouldn't be.
+            for (x = 0; x < width; x++)
+            {
+                for (y = 0; y < height; y++)
+                {
+                    for (z = 0; z < depth; z++)
+                    {
                         int baseIndex = x + yw[y] + zwh[z];
                         lessThan[baseIndex] = voxels[baseIndex] <= 0 ? 1 : 0;
                     }
                 }
             }
-            //Profiler.EndSample();
-            x = y = z = 0;
 
-            //Profiler.BeginSample("Marching over the array");
+#if PROFILING 
+            Profiler.EndSample();
+            Profiler.BeginSample("Marching over the array");
+#endif
+
+            x = y = z = 0;
             for (x = 0; x < width - 1; x++)
             {
                 for (y = 0; y < height - 1; y++)
@@ -126,20 +151,23 @@ namespace FastMarchingCubes
                     for (z = 0; z < depth - 1; z++)
                     {
                         //Get the values in the 8 neighbours which make up a cube
-                        //Profiler.BeginSample("Index computation");
+#if PROFILING 
+                        Profiler.BeginSample("Index computation");
+#endif
 
                         int baseIndex = x + yw[y] + zwh[z];
                         int b1 = baseIndex + 1;
                         int b1w = b1 + width;
                         int bw = baseIndex + width;
 
-                        //Profiler.EndSample();
+#if PROFILING
+                        Profiler.EndSample();
+                        Profiler.BeginSample("Voxel surface computation");
+#endif
 
-                        //Profiler.BeginSample("Voxel surface computation");
-
-                        int flagIndex = 
-                            lessThan[baseIndex] | 
-                            (lessThan[b1] << 1) | 
+                        int flagIndex =
+                            lessThan[baseIndex] |
+                            (lessThan[b1] << 1) |
                             (lessThan[b1w] << 2) |
                             (lessThan[bw] << 3) |
                             (lessThan[baseIndex + wh] << 4) |
@@ -151,7 +179,9 @@ namespace FastMarchingCubes
 
                         int edgeFlags = MarchingCubes.CubeEdgeFlags[flagIndex];
 
-                        //Profiler.EndSample();
+#if PROFILING
+                        Profiler.EndSample();
+#endif
 
                         //If the cube is entirely inside or outside of the surface, then there will be no intersections
                         if (edgeFlags == 0)
@@ -161,7 +191,9 @@ namespace FastMarchingCubes
                         int i, j, vert, idx;
                         float offset = 0.0f;
 
-                        //Profiler.BeginSample("March intersection");
+#if PROFILING
+                        Profiler.BeginSample("March intersection");
+#endif
                         //Find the point of intersection of the surface with each edge
                         for (i = 0; i < 12; i++)
                         {
@@ -178,14 +210,16 @@ namespace FastMarchingCubes
                                 if ((ec1 & 2) == 0)
                                 {
                                     p1 = voxels[(x + (ec1 & 1)) + (y * width) + ((z + ((ec1 & 4) >> 2)) * wh)];
-                                } else 
+                                }
+                                else
                                 {
                                     p1 = voxels[(x + (1 - (ec1 & 1))) + ((y + 1) * width) + ((z + ((ec1 & 4) >> 2)) * wh)];
                                 }
                                 if ((ec2 & 2) == 0)
                                 {
                                     p2 = voxels[(x + (ec2 & 1)) + (y * width) + ((z + ((ec2 & 4) >> 2)) * wh)];
-                                } else 
+                                }
+                                else
                                 {
                                     p2 = voxels[(x + (1 - (ec2 & 1))) + ((y + 1) * width) + ((z + ((ec2 & 4) >> 2)) * wh)];
                                 }
@@ -199,9 +233,12 @@ namespace FastMarchingCubes
                                 EdgeVertex[i].z = z + (VertexOffset[MarchingCubes.EdgeConnection[i, 0], 2] + offset * MarchingCubes.EdgeDirection[i, 2]);
                             }
                         }
-                        //Profiler.EndSample();
 
-                        //Profiler.BeginSample("March triangles");
+#if PROFILING
+                        Profiler.EndSample();
+                        Profiler.BeginSample("March triangles");
+#endif
+
                         //Save the triangles that were found. There can be up to five per cube
                         for (i = 0; i < 15; i += 3)
                         {
@@ -216,12 +253,18 @@ namespace FastMarchingCubes
                                 vertList.Add(EdgeVertex[vert]);
                             }
                         }
-                        //Profiler.EndSample();
+
+#if PROFILING
+                        Profiler.EndSample();
+#endif
 
                     }
                 }
             }
-            //Profiler.EndSample();
+
+#if PROFILING
+            Profiler.EndSample();
+#endif
         }
 
          /// <summary>

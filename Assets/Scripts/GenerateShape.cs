@@ -556,15 +556,23 @@ public class GenerateShape : MonoBehaviour {
         Profiler.EndSample();
     }
 
+    private static List<Vector3> noisySphereVertices;
+    private static List<int> noisySphereTriangles;
+
     private void GenerateNoisySphere(Mesh mesh) {
+        Profiler.BeginSample("Setup");
         Perlin3D perlin = new Perlin3D(seed);
         ProceduralNoiseProject.PerlinNoise perlin2 = new ProceduralNoiseProject.PerlinNoise(seed, 1f);
 
         FastNoise fast = new FastNoise(seed);
+        fast.SetFractalOctaves(8);
+        fast.SetFrequency(1f);
         fast.SetInterp(FastNoise.Interp.Linear);
 
         int size = 1 << recursionDepth;
         int hs = 1 << (recursionDepth - 1);
+
+        Profiler.EndSample();
 
         Profiler.BeginSample("Generate Perlin noise");
         float[] noise = new float[size * size * size];
@@ -579,16 +587,20 @@ public class GenerateShape : MonoBehaviour {
                     if (dist >= hs * hs)
                     {
                         // Change the "0.5f -" to "0.5f +" to see the outside shell flipped around.
-                        noise[baseIndex] = 0.5f - Mathf.Sqrt(dist - (hs * hs));
+                        noise[baseIndex] = + Mathf.Sqrt(dist - (hs * hs));
                     }
                     else
                     {
+                        // Noise, normalized to [-0.5, 0.5].
+
                         // Perlin3D class
-                        //noise[baseIndex] = 0.5f + (0.5f * perlin.GetValue(i / terrainGenerationScaleX, j / terrainGenerationScaleX, k / terrainGenerationScaleX));
+                        noise[baseIndex] = (0.5f * perlin.GetValue(i / terrainGenerationScaleX, j / terrainGenerationScaleX, k / terrainGenerationScaleX, 8));
 
                         // Custom DLL
                         //noise[baseIndex] = Perlin3D.GetValueFast(i / terrainGenerationScaleX, j / terrainGenerationScaleX, k / terrainGenerationScaleX);
-                        noise[baseIndex] = 0.5f + (0.5f * fast.GetPerlin(i / terrainGenerationScaleX, j / terrainGenerationScaleX, k / terrainGenerationScaleX));
+
+                        // FastNoise
+                        //noise[baseIndex] = -0.5f + (fast.GetPerlin(i / terrainGenerationScaleX, j / terrainGenerationScaleX, k / terrainGenerationScaleX));
 
                         // ProceduralNoise library
                         //noise[baseIndex] = perlin2.Sample3D(i / terrainGenerationScaleX, j / terrainGenerationScaleX, k / terrainGenerationScaleX);
@@ -601,20 +613,44 @@ public class GenerateShape : MonoBehaviour {
 
         Profiler.BeginSample("Marching cubes");
 
-        MarchingCubesProject.MarchingCubes marching = new MarchingCubesProject.MarchingCubes();
-        //FastMarchingCubes.MarchingCubes marching = new FastMarchingCubes.MarchingCubes();
-        List<Vector3> vertices = new List<Vector3>();
-        List<int> triangles = new List<int>();
+        //MarchingCubesProject.MarchingCubes marching = new MarchingCubesProject.MarchingCubes();
+        FastMarchingCubes.MarchingCubes marching = new FastMarchingCubes.MarchingCubes();
 
-        marching.Generate(noise, size, size, size, vertices, triangles);
-        //marching.MarchBlock(noise, size, size, size, vertices, triangles);
+        if (noisySphereVertices == null)
+        {
+            noisySphereVertices = new List<Vector3>(30000);
+        }
+        else
+        {
+            noisySphereVertices.Clear();
+        }
+
+        if (noisySphereTriangles == null)
+        {
+            noisySphereTriangles = new List<int>(30000);
+        }
+        else
+        {
+            noisySphereTriangles.Clear();
+        }
+
+        //List<Vector3> vertices = new List<Vector3>(60000);
+        //List<int> triangles = new List<int>(60000);
+
+        //marching.Generate(noise, size, size, size, vertices, triangles);
+        marching.MarchBlock(noise, size, size, size, noisySphereVertices, noisySphereTriangles);
 
         Profiler.EndSample();
 
-        mesh.vertices = vertices.ToArray();
-        mesh.triangles = triangles.ToArray();
-        Debug.Log("Generated " + vertices.Count + " vertices.");
+        Profiler.BeginSample("Mesh assignment stuff");
+
+        mesh.vertices = noisySphereVertices.ToArray();
+        mesh.triangles = noisySphereTriangles.ToArray();
+
+        Debug.Log("Generated " + noisySphereVertices.Count + " vertices.");
+        Debug.Log("Generated " + noisySphereTriangles.Count + " triangles.");
         mesh.RecalculateNormals();
+        Profiler.EndSample();
     }
 
     private void GenerateRhombus(Mesh mesh)
