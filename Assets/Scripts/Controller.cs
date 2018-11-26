@@ -2,6 +2,10 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// A basic first person player controller.
+/// Allows for flight mode and walking around on a surface.
+/// </summary>
 public class Controller : MonoBehaviour {
 
 	public KeyCode[] forward { get; set; }

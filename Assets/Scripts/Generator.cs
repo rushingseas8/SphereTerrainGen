@@ -2,6 +2,11 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// Contains a bunch of methods used for generating Mesh objects from vertices
+/// and triangles. Also has a few methods for subdividing, with and without 
+/// shared vertices in the resulting mesh.
+/// </summary>
 public static class Generator {
 
     public static Mesh GenerateMesh(Vector3[] vertices, int[] triangles, Vector2[] uvs = null, Vector3[] normals = null) 
@@ -28,20 +33,29 @@ public static class Generator {
         return mesh;
     }
 
+    /// <summary>
+    /// Generates a GameObject from a given Mesh.
+    /// 
+    /// This object will have a mesh filter, renderer, and collider attached by default.
+    /// </summary>
+    /// <returns>The object.</returns>
+    /// <param name="mesh">Mesh.</param>
+    /// <param name="position">Position.</param>
+    /// <param name="rotation">Rotation.</param>
     public static GameObject GenerateObject(Mesh mesh, Vector3 position = default(Vector3), Quaternion rotation = default(Quaternion)) 
     {
         GameObject obj = new GameObject();
 
         MeshFilter meshFilter = obj.AddComponent<MeshFilter>();
         MeshRenderer meshRenderer = obj.AddComponent<MeshRenderer>();
-        //MeshCollider meshCollider = obj.AddComponent<MeshCollider>();
+        MeshCollider meshCollider = obj.AddComponent<MeshCollider>();
 
         meshFilter.mesh = mesh;
         //meshRenderer.material = new Material(Shader.Find("Diffuse"));
         //meshRenderer.material = Resources.Load<Material>("Materials/Debug");
         meshRenderer.material = Resources.Load<Material>("Materials/Grass");
         //meshRenderer.material = Resources.Load<Material>("Materials/GrassSeamless");
-        //meshCollider.sharedMesh = mesh;
+        meshCollider.sharedMesh = mesh;
 
         obj.transform.position = position;
         obj.transform.rotation = rotation;
@@ -49,7 +63,32 @@ public static class Generator {
         return obj;
     }
 
-    public static int GetVertex(int i1, int i2, ref List<Vector3> vertices, ref Dictionary<uint, int> newVertices)
+    /// <summary>
+    /// Like <see cref="GenerateObject(Mesh, Vector3, Quaternion)"/>, but doesn't
+    /// generate a MeshCollider. This is faster if you don't care about collisions.
+    /// 
+    /// </summary>
+    /// <returns>The object without collider.</returns>
+    /// <param name="mesh">Mesh.</param>
+    /// <param name="position">Position.</param>
+    /// <param name="rotation">Rotation.</param>
+    public static GameObject GenerateObjectWithoutCollider(Mesh mesh, Vector3 position = default(Vector3), Quaternion rotation = default(Quaternion))
+    {
+        GameObject obj = new GameObject();
+
+        MeshFilter meshFilter = obj.AddComponent<MeshFilter>();
+        MeshRenderer meshRenderer = obj.AddComponent<MeshRenderer>();
+
+        meshFilter.mesh = mesh;
+        meshRenderer.material = Resources.Load<Material>("Materials/Grass");
+
+        obj.transform.position = position;
+        obj.transform.rotation = rotation;
+
+        return obj;
+    }
+
+    private static int GetVertex(int i1, int i2, ref List<Vector3> vertices, ref Dictionary<uint, int> newVertices)
     {
         // We have to test both directions since the edge
         // could be reversed in another triangle
@@ -76,6 +115,11 @@ public static class Generator {
         return newIndex;
     }
 
+    /// <summary>
+    /// Subdivides the specified mesh. This assumes you want the resulting 
+    /// triangles to be connected; i.e., the vertices are shared.
+    /// </summary>
+    /// <param name="mesh">The mesh to divide.</param>
     public static void Subdivide(Mesh mesh)
     {
         Dictionary<uint, int> newVertices = new Dictionary<uint, int>();
@@ -119,6 +163,11 @@ public static class Generator {
         //Debug.Log("UVs: " + uvs.Count);
     }
 
+    /// <summary>
+    /// Subdivides the mesh, but generates new vertices and new triangles for
+    /// every subdivision. That is, the resulting vertices are not shared.
+    /// </summary>
+    /// <param name="mesh">Mesh.</param>
     public static void SubdivideNotShared(Mesh mesh)
     {
         List<Vector3> newVertices = new List<Vector3>();
@@ -182,6 +231,9 @@ public static class Generator {
     /// vertices in essentially a rectangular array, and the triangles as described
     /// within the algorithm), and returns a mesh with 4x as many triangles and vertices,
     /// maintaining the same ordering.
+    /// 
+    /// Used specifically for dividing an icosahedron without breaking the ordering
+    /// of the mesh.
     /// </summary>
     /// <param name="mesh">Mesh.</param>
     public static void SubdivideNotSharedOrdered(Mesh mesh, int recursionDepth) 
@@ -357,76 +409,6 @@ public static class Generator {
                     topRowIndex += 12;
                 }
             }
-        }
-    }
-
-    public static void SortByBottomLeft(ref Vector3[] vertices, ref int[] triangles)
-    {
-        Vector3[] toReturn = new Vector3[vertices.Length];
-
-        Debug.Assert(vertices.Length == triangles.Length);
-
-        FaceStorage[] faces = new FaceStorage[vertices.Length / 3];
-        for (int i = 0; i < vertices.Length; i += 3)
-        {
-            FaceStorage face = new FaceStorage();
-
-            face.vertices = new Vector3[] {
-                vertices[i + 0], vertices[i + 1], vertices[i + 2]
-            };
-            face.triangles = new int[] {
-                triangles[i + 0], triangles[i + 1], triangles[i + 2]
-            };
-
-            faces[i / 3] = face;
-        }
-
-        System.Array.Sort(faces);
-
-        for (int i = 0; i < faces.Length; i++)
-        {
-            FaceStorage face = faces[i];
-
-            vertices[(3 * i) + 0] = face.vertices[0];
-            vertices[(3 * i) + 1] = face.vertices[1];
-            vertices[(3 * i) + 2] = face.vertices[2];
-
-            triangles[(3 * i) + 0] = face.triangles[0];
-            triangles[(3 * i) + 1] = face.triangles[1];
-            triangles[(3 * i) + 2] = face.triangles[2];
-        }
-    }
-
-    private class FaceStorage : System.IComparable<FaceStorage>
-    {
-        public Vector3[] vertices;
-        public int[] triangles;
-
-        public int CompareTo(FaceStorage other)
-        {
-            // Check y first
-            if (other.vertices[0].y < vertices[0].y)
-            {
-                return 1;
-            }
-
-            if (other.vertices[0].y > vertices[0].y)
-            {
-                return -1;
-            }
-
-            // Check x if y values are equal
-            if (other.vertices[0].x < vertices[0].x)
-            {
-                return 1;
-            }
-
-            if (other.vertices[0].x > vertices[0].x)
-            {
-                return 1;
-            }
-
-            return 0;
         }
     }
 

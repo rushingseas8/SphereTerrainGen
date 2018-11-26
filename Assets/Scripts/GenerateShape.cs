@@ -23,7 +23,7 @@ public class GenerateShape : MonoBehaviour {
 
     [SerializeField]
     [Tooltip("How many subdivisions we perform on the mesh.")]
-    [Range(0, 6)]
+    [Range(0, 7)]
     private int recursionDepth = 1;
 
     [SerializeField]
@@ -192,7 +192,7 @@ public class GenerateShape : MonoBehaviour {
             }
             else
             {
-                Generator.SubdivideNotSharedOrdered(mesh, recursionDepth);
+                Generator.SubdivideNotShared(mesh);
             }
         }
         vertices = new List<Vector3>(mesh.vertices);
@@ -487,32 +487,13 @@ public class GenerateShape : MonoBehaviour {
 
         Profiler.BeginSample("Perlin noise generation");
 
-        //if (perlinOnGPU)
-        //{
-            //Perlin perlin = new Perlin();
-            //float[] noise = null;
-
-            // TODO make this a coroutine bc asking gpu for data is async
-            //Debug.Log("Smashing GPU for data");
-            //while (noise == null) {
-            //    noise = perlin.GetValueShader(vertices);
-            //}
-            //Debug.Log("Ok done");
-
-            //for (int i = 0; i < vertices.Length; i++)
-            //{
-            //    vertices[i] = (1f + (noise[i] - 0.5f) / 4f) * vertices[i];
-            //}
-        //}
-        //else
-        //{
-            Perlin3D perlin = new Perlin3D(seed);
-            for (int i = 0; i < vertices.Length; i++) {
-                float noise = 1f + (perlin.GetValue(vertices[i].x, vertices[i].y, vertices[i].z, 1) - 0.5f) / 4f;
-                vertices[i] = noise * vertices[i];
-            }
-        //}
-
+        FastNoise perlin = new FastNoise(seed);
+        perlin.SetFrequency(1f);
+        perlin.SetFractalOctaves(octaves);
+        for (int i = 0; i < vertices.Length; i++) {
+            float noise = 1f + (perlin.GetPerlinFractal(vertices[i].x, vertices[i].y, vertices[i].z) - 0.5f) / 4f;
+            vertices[i] = noise * vertices[i];
+        }
 
         Profiler.EndSample();
 
@@ -561,8 +542,6 @@ public class GenerateShape : MonoBehaviour {
 
     private void GenerateNoisySphere(Mesh mesh) {
         Profiler.BeginSample("Setup");
-        Perlin3D perlin = new Perlin3D(seed);
-        ProceduralNoiseProject.PerlinNoise perlin2 = new ProceduralNoiseProject.PerlinNoise(seed, 1f);
 
         FastNoise fast = new FastNoise(seed);
         fast.SetFractalOctaves(8);
@@ -594,13 +573,13 @@ public class GenerateShape : MonoBehaviour {
                         // Noise, normalized to [-0.5, 0.5].
 
                         // Perlin3D class
-                        noise[baseIndex] = (0.5f * perlin.GetValue(i / terrainGenerationScaleX, j / terrainGenerationScaleX, k / terrainGenerationScaleX, 8));
+                        //noise[baseIndex] = (0.5f * perlin.GetValue(i / terrainGenerationScaleX, j / terrainGenerationScaleX, k / terrainGenerationScaleX, 8));
 
                         // Custom DLL
                         //noise[baseIndex] = Perlin3D.GetValueFast(i / terrainGenerationScaleX, j / terrainGenerationScaleX, k / terrainGenerationScaleX);
 
                         // FastNoise
-                        //noise[baseIndex] = -0.5f + (fast.GetPerlin(i / terrainGenerationScaleX, j / terrainGenerationScaleX, k / terrainGenerationScaleX));
+                        noise[baseIndex] = -0.5f + (fast.GetPerlin(i / terrainGenerationScaleX, j / terrainGenerationScaleX, k / terrainGenerationScaleX));
 
                         // ProceduralNoise library
                         //noise[baseIndex] = perlin2.Sample3D(i / terrainGenerationScaleX, j / terrainGenerationScaleX, k / terrainGenerationScaleX);
@@ -614,7 +593,7 @@ public class GenerateShape : MonoBehaviour {
         Profiler.BeginSample("Marching cubes");
 
         //MarchingCubesProject.MarchingCubes marching = new MarchingCubesProject.MarchingCubes();
-        FastMarchingCubes.MarchingCubes marching = new FastMarchingCubes.MarchingCubes();
+        FastMarchingCubes marching = new FastMarchingCubes();
 
         if (noisySphereVertices == null)
         {
@@ -830,7 +809,10 @@ public class GenerateShape : MonoBehaviour {
         mesh.uv = uvs;
 
         // Do a noise pass, adding Perlin stuff
-        Perlin perlin = new Perlin(291, 842, octaves);
+        //Perlin perlin = new Perlin(291, 842, octaves);
+        FastNoise perlin = new FastNoise(seed);
+        perlin.SetFrequency(1f);
+        perlin.SetFractalOctaves(octaves);
         //int width = (int)Mathf.Pow(2, recursionDepth + 1) + 1;
 
         int wp1 = width + 1;
@@ -843,13 +825,8 @@ public class GenerateShape : MonoBehaviour {
                 int baseIndex = (i * ((width * 2) + 1)) + j;
                 //int baseIndex = (i * wp1) + j;
 
-                float u = i;
-                float v = j;
-
-                float x = perlin.XFromUV(u, v);
-                float y = perlin.YFromUV(u, v);
-
-                noise[baseIndex] = perlin.GetNormalizedValue((x / terrainGenerationScaleX), (y / terrainGenerationScaleZ));
+                // This might not be normalized to the range [0, 1].
+                noise[baseIndex] = perlin.GetPerlinFractal((i / terrainGenerationScaleX), (j / terrainGenerationScaleZ));
             }
         }
 

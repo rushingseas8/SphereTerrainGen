@@ -61,35 +61,20 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Assets\MarchingCubes\Example.cs" />
-    <Compile Include="Assets\MarchingCubes\Marching\IMarching.cs" />
-    <Compile Include="Assets\MarchingCubes\Marching\Marching.cs" />
-    <Compile Include="Assets\MarchingCubes\Marching\MarchingCubes.cs" />
-    <Compile Include="Assets\MarchingCubes\Marching\MarchingTertahedron.cs" />
-    <Compile Include="Assets\ProceduralNoise\Example.cs" />
-    <Compile Include="Assets\ProceduralNoise\Noise\FractalNoise.cs" />
-    <Compile Include="Assets\ProceduralNoise\Noise\INoise.cs" />
-    <Compile Include="Assets\ProceduralNoise\Noise\Noise.cs" />
-    <Compile Include="Assets\ProceduralNoise\Noise\PerlinNoise.cs" />
-    <Compile Include="Assets\ProceduralNoise\Noise\PermutationTable.cs" />
-    <Compile Include="Assets\ProceduralNoise\Noise\SimplexNoise.cs" />
-    <Compile Include="Assets\ProceduralNoise\Noise\ValueNoise.cs" />
-    <Compile Include="Assets\ProceduralNoise\Noise\VoronoiNoise.cs" />
-    <Compile Include="Assets\ProceduralNoise\Noise\WorleyNoise.cs" />
     <Compile Include="Assets\Scripts\Controller.cs" />
     <Compile Include="Assets\Scripts\Coordinate.cs" />
+    <Compile Include="Assets\Scripts\Experimental\GenerateTexturedPlane.cs" />
+    <Compile Include="Assets\Scripts\Experimental\PerlinGPU.cs" />
     <Compile Include="Assets\Scripts\FastNoise\FastNoise.cs" />
     <Compile Include="Assets\Scripts\GameManager.cs" />
-    <Compile Include="Assets\Scripts\GenerateIcosphere2.cs" />
-    <Compile Include="Assets\Scripts\GeneratePlane.cs" />
     <Compile Include="Assets\Scripts\GenerateShape.cs" />
+    <Compile Include="Assets\Scripts\GenerateWorld.cs" />
     <Compile Include="Assets\Scripts\Generator.cs" />
-    <Compile Include="Assets\Scripts\Marching\IMarching.cs" />
-    <Compile Include="Assets\Scripts\Marching\Marching.cs" />
-    <Compile Include="Assets\Scripts\Marching\MarchingCubes.cs" />
-    <Compile Include="Assets\Scripts\Marching\MarchingTertahedron.cs" />
-    <Compile Include="Assets\Scripts\Perlin.cs" />
-    <Compile Include="Assets\Scripts\Perlin3D.cs" />
+    <Compile Include="Assets\Scripts\Marching\FastMarchingCubes.cs" />
+    <Compile Include="Assets\Scripts\Storage\CubeBuffer.cs" />
+    <Compile Include="Assets\Scripts\Storage\Direction.cs" />
+    <Compile Include="Assets\Scripts\Storage\SquareBuffer.cs" />
+    <Compile Include="Assets\Scripts\Storage\TerrainTile.cs" />
     <None Include="Assets\Shaders\Perlin.compute" />
     <None Include="Assets\Shaders\TextureArrayShader.shader" />
     <None Include="Assets\Resources\Shaders\Perlin3D.compute" />

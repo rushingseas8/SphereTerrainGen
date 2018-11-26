@@ -87,6 +87,23 @@ public class CoordinateLookup
      * Find exact triangle coordinates using face and coordinates (coordinates give relative position)
      * Normalize triangle coordinates to obtain spherical coordinate. 
      */
+    /// <summary>
+    /// Converts a mesh coordinate to its respective spherical coordinate.
+    /// 
+    /// The "mesh coordinate" is defined as the (x, y) position within the mesh, 
+    /// when iterating over the triangles of the mesh (rather than the rhombuses).
+    /// 
+    /// The "sphere coordinate" is where the vertex of the mesh would be moved to
+    /// when mapped to a sphere. This requires finding out which face of the icosahedron
+    /// the mesh coordinate is in, which makes this a nontrivial computation.
+    /// 
+    /// </summary>
+    /// <returns>The sphere coordinate.</returns>
+    /// <param name="lobe">Which lobe of the icosahedron we're in. Valid values are integers in [0, 4].</param>
+    /// <param name="meshX">The mesh X coordinate, i.e., width.</param>
+    /// <param name="meshY">The mesh Y coordinate, i.e., length.</param>
+    /// <param name="triangleIndex">Which triangle vertex we're in. Valid values are in {0, 1, 2}.</param>
+    /// <param name="recursionDepth">Recursion depth. TODO pull this from global parameter (GameManager?).</param>
     public Vector3 MeshToSphere(int lobe, int meshX, int meshY, int triangleIndex, int recursionDepth) 
     {
         Profiler.BeginSample("MeshToSphere");
@@ -277,4 +294,29 @@ public class CoordinateLookup
     {
         return Vector2.zero;
     }
+
+    #region Converters from skew [generation] coordinates to square [mesh array] coordinates
+    public static float UFromXZ(float x, float z)
+    {
+        return x - (Mathf.Sqrt(3) / 3f * z);
+    }
+
+    public static float VFromXZ(float x, float z)
+    {
+        return 2f * Mathf.Sqrt(3) / 3f * z;
+    }
+    #endregion
+
+
+    #region Converters from square [mesh array] coordinates to skew [generation] coordinates
+    public static float XFromUV(float u, float v)
+    {
+        return u + (0.5f * v);
+    }
+
+    public static float YFromUV(float u, float v)
+    {
+        return (Mathf.Sqrt(3) / 2f) * v;
+    }
+    #endregion
 }
