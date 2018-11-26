@@ -26,6 +26,8 @@
 // off every 'zix'.)
 //
 
+// Found at: https://github.com/Auburns/FastNoise_CSharp
+
 // Uncomment the line below to swap all the inputs/outputs/calculations of FastNoise to doubles instead of floats
 //#define FN_USE_DOUBLES
 
