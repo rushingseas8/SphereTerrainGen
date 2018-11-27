@@ -296,11 +296,24 @@ public class CoordinateLookup
     }
 
     #region Converters from skew [generation] coordinates to square [mesh array] coordinates
+
+    /// <summary>
+    /// Converts Cartesian coordinates to Einstein coordinates.
+    /// </summary>
+    /// <returns>The resulting U value (maps to Einstein X).</returns>
+    /// <param name="x">X.</param>
+    /// <param name="z">Z.</param>
     public static float UFromXZ(float x, float z)
     {
         return x - (Mathf.Sqrt(3) / 3f * z);
     }
 
+    /// <summary>
+    /// Converts Cartesian coordinates to Einstein coordinates.
+    /// </summary>
+    /// <returns>The resulting V value (maps to Einstein Z).</returns>
+    /// <param name="x">X.</param>
+    /// <param name="z">Z.</param>
     public static float VFromXZ(float x, float z)
     {
         return 2f * Mathf.Sqrt(3) / 3f * z;
@@ -309,12 +322,25 @@ public class CoordinateLookup
 
 
     #region Converters from square [mesh array] coordinates to skew [generation] coordinates
+
+    /// <summary>
+    /// Converts Einstein coordinates to Cartesian coordinates.
+    /// </summary>
+    /// <returns>The resulting X value.</returns>
+    /// <param name="u">U.</param>
+    /// <param name="v">V.</param>
     public static float XFromUV(float u, float v)
     {
         return u + (0.5f * v);
     }
 
-    public static float YFromUV(float u, float v)
+    /// <summary>
+    /// Converts Einstein coordinates to Cartesian coordinates.
+    /// </summary>
+    /// <returns>The resulting Y value.</returns>
+    /// <param name="u">U.</param>
+    /// <param name="v">V.</param>
+    public static float ZFromUV(float u, float v)
     {
         return (Mathf.Sqrt(3) / 2f) * v;
     }

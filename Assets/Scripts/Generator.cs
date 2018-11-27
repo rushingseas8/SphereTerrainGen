@@ -85,6 +85,8 @@ public static class Generator {
         obj.transform.position = position;
         obj.transform.rotation = rotation;
 
+        obj.isStatic = true;
+
         return obj;
     }
 

@@ -13,16 +13,21 @@ public class TerrainTile
 
     private const int recursionDepth = 7;
 
-    public TerrainTile(int worldX, int worldY)
+    public TerrainTile(float worldX, float worldZ)
     {
-        GenerateMeshes(worldX, worldY);
-        GameObject lower = Generator.GenerateObject(lowerMesh);
-        lower.name = "Lower";
-        GameObject upper = Generator.GenerateObject(upperMesh);
-        upper.name = "Upper";
+        float genX = 128 * CoordinateLookup.XFromUV(worldX, worldZ);
+        float genZ = 128 * CoordinateLookup.ZFromUV(worldX, worldZ);
+
+        GenerateMeshes(worldX, worldZ);
+        GameObject lower = Generator.GenerateObject(lowerMesh, new Vector3(genX, 0, genZ));
+        lower.transform.localScale = 128 * Vector3.one;
+        lower.name = "Lower x=" + worldX + " z=" + worldZ;
+        GameObject upper = Generator.GenerateObject(upperMesh, new Vector3(genX, 0, genZ));
+        upper.name = "Upper x=" + worldX + " z=" + worldZ;
+        upper.transform.localScale = 128 * Vector3.one;
     }
 
-    private void GenerateMeshes(int worldX, int worldY)
+    private void GenerateMeshes(float worldX, float worldZ)
     {
         float width = 1 << recursionDepth;
         float[] noise = new float[(int)((width + 1) * (width + 1))];
@@ -31,9 +36,12 @@ public class TerrainTile
         {
             for (int j = 0; j < width + 1; j++)
             {
-                //noise[(int)((i * (width + 1)) + j)] = GameManager.NoiseGenerator.GetPerlinFractal(worldX + (i / width), worldY + (j / width));
+                float u = worldX + (i / width);
+                float v = worldZ + (j / width);
+                noise[(int)((j * (width + 1)) + i)] = GameManager.NoiseGenerator.GetPerlinFractal(CoordinateLookup.XFromUV(u, v), CoordinateLookup.ZFromUV(u, v));
                 //noise[(int)((i * (width + 1)) + j)] = 0f;
-                noise[(int)((i * (width + 1)) + j)] = j / width;
+                //noise[(int)((i * (width + 1)) + j)] = i / width;
+                //noise[(int)((i * (width + 1)) + j)] = j / width;
             }
         }
 
@@ -51,7 +59,8 @@ public class TerrainTile
         for (int z = 0; z < width; z++)
         {
             //todo make this an equilateral triangle, not a half square
-            //float widthOffset = i * 0.5f;
+            float offset = z / width * 0.5f;
+            float offsetAndHalf = (z + 1) / width * 0.5f;
 
             // todo: Factor out conditionals by being clever about the loop.
             // for now it's fine, but later this will be a relatively nice optimization.
@@ -62,8 +71,9 @@ public class TerrainTile
 
             for (int x = 0; x < width; x++)
             {
+                float heightScale = Mathf.Sqrt(3) / 2f;
                 //int baseIndex = 6 * (int)((i * width) + j);
-                int noiseBase = (int)((z * width) + x);
+                int noiseBase = (int)((z * (width + 1)) + x);
 
                 //int baseIndex = count;
                 //Debug.Log(baseIndex);
@@ -83,9 +93,9 @@ public class TerrainTile
                 // bottom half, left triangle
                 if (x + z + 1 <= width)
                 {
-                    lowerVertices[lowerCount + 0] = new Vector3((x + 0) / width, noise[noiseBase], (z + 0) / width);
-                    lowerVertices[lowerCount + 1] = new Vector3((x + 0) / width, noise[noiseBase + (int)width], (z + 1) / width);
-                    lowerVertices[lowerCount + 2] = new Vector3((x + 1) / width, noise[noiseBase + 1], (z + 0) / width);
+                    lowerVertices[lowerCount + 0] = new Vector3(offset + ((x + 0) / width), noise[noiseBase], heightScale * (z + 0) / width);
+                    lowerVertices[lowerCount + 1] = new Vector3(offsetAndHalf + ((x + 0) / width), noise[noiseBase + (int)(width + 1)], heightScale * (z + 1) / width);
+                    lowerVertices[lowerCount + 2] = new Vector3(offset + ((x + 1) / width), noise[noiseBase + 1], heightScale * (z + 0) / width);
 
                     lowerTriangles[lowerCount + 0] = lowerCount + 0;
                     lowerTriangles[lowerCount + 1] = lowerCount + 1;
@@ -93,14 +103,27 @@ public class TerrainTile
 
                     lowerCount += 3;
                 }
+                // top half, left triangle
+                else
+                {
+                    upperVertices[upperCount + 0] = new Vector3(offset + ((x + 0) / width), noise[noiseBase], heightScale * (z + 0) / width);
+                    upperVertices[upperCount + 1] = new Vector3(offsetAndHalf + ((x + 0) / width), noise[noiseBase + (int)(width + 1)], heightScale * (z + 1) / width);
+                    upperVertices[upperCount + 2] = new Vector3(offset + ((x + 1) / width), noise[noiseBase + 1], heightScale * (z + 0) / width);
+
+                    upperTriangles[upperCount + 0] = upperCount + 0;
+                    upperTriangles[upperCount + 1] = upperCount + 1;
+                    upperTriangles[upperCount + 2] = upperCount + 2;
+
+                    upperCount += 3;
+                }
 
                 // bottom half, right triangle. This triangle has flipped indices.
-                if (x + z + 2 <= width) 
+                if (x + z + 2 <= width)
                 {
 
-                    lowerVertices[lowerCount + 0] = new Vector3((x + 0) / width, noise[noiseBase + (int)width], (z + 1) / width);
-                    lowerVertices[lowerCount + 1] = new Vector3((x + 1) / width, noise[noiseBase + 1], (z + 0) / width);
-                    lowerVertices[lowerCount + 2] = new Vector3((x + 1) / width, noise[noiseBase + (int)width + 1], (z + 1) / width);
+                    lowerVertices[lowerCount + 0] = new Vector3(offsetAndHalf + ((x + 0) / width), noise[noiseBase + (int)(width + 1)], heightScale * (z + 1) / width);
+                    lowerVertices[lowerCount + 1] = new Vector3(offset + ((x + 1) / width), noise[noiseBase + 1], heightScale * (z + 0) / width);
+                    lowerVertices[lowerCount + 2] = new Vector3(offsetAndHalf + ((x + 1) / width), noise[noiseBase + (int)width + 2], heightScale * (z + 1) / width);
 
 
                     lowerTriangles[lowerCount + 0] = lowerCount + 0;
@@ -109,27 +132,12 @@ public class TerrainTile
 
                     lowerCount += 3;
                 }
-
-                // top half, left triangle
-                if (x + z + 1 > width) 
-                {
-                    upperVertices[upperCount + 0] = new Vector3((x + 0) / width, noise[noiseBase], (z + 0) / width);
-                    upperVertices[upperCount + 1] = new Vector3((x + 0) / width, noise[noiseBase + (int)width], (z + 1) / width);
-                    upperVertices[upperCount + 2] = new Vector3((x + 1) / width, noise[noiseBase + 1], (z + 0) / width);
-                    
-                    upperTriangles[upperCount + 0] = upperCount + 0;
-                    upperTriangles[upperCount + 1] = upperCount + 1;
-                    upperTriangles[upperCount + 2] = upperCount + 2;
-
-                    upperCount += 3;
-                }
-
                 // top half, right triangle. This triangle has flipped indices.
-                if (x + z + 2 > width)
+                else
                 {
-                    upperVertices[upperCount + 0] = new Vector3((x + 0) / width, noise[noiseBase + (int)width], (z + 1) / width);
-                    upperVertices[upperCount + 1] = new Vector3((x + 1) / width, noise[noiseBase + 1], (z + 0) / width);
-                    upperVertices[upperCount + 2] = new Vector3((x + 1) / width, noise[noiseBase + (int)width + 1], (z + 1) / width);
+                    upperVertices[upperCount + 0] = new Vector3(offsetAndHalf + ((x + 0) / width), noise[noiseBase + (int)(width + 1)], heightScale * (z + 1) / width);
+                    upperVertices[upperCount + 1] = new Vector3(offset + ((x + 1) / width), noise[noiseBase + 1], heightScale * (z + 0) / width);
+                    upperVertices[upperCount + 2] = new Vector3(offsetAndHalf + ((x + 1) / width), noise[noiseBase + (int)width + 2], heightScale * (z + 1) / width);
 
                     upperTriangles[upperCount + 0] = upperCount + 0;
                     upperTriangles[upperCount + 1] = upperCount + 2;

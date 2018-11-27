@@ -81,7 +81,15 @@ public class GameManager : MonoBehaviour {
         //Perlin perlin = new Perlin();
         //Debug.Log("GPU Perlin: " + perlin.GetValueShader(new Vector3(0, 0, 0)));
 
-        TerrainTile tile = new TerrainTile(0, 0);
+        for (int i = -renderDistance; i <= renderDistance; i++)
+        {
+            for (int j = -renderDistance; j <= renderDistance; j++)
+            {
+                TerrainTile tile = new TerrainTile(i, j);
+            }
+        }
+
+        //TerrainTile tile = new TerrainTile(0, 0);
     }
 	
 	// Update is called once per frame
