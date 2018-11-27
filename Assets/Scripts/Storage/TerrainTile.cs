@@ -11,15 +11,24 @@ public class TerrainTile
     private Mesh lowerMesh;
     private Mesh upperMesh;
 
-    private const int recursionDepth = 7;
+    //private const int recursionDepth = 7;
+    private int recursionDepth;
 
-    public TerrainTile(float worldX, float worldZ)
+    public TerrainTile(int worldX, int worldZ, int LOD=7)
     {
+        if (LOD > 7)
+        {
+            LOD = 7;
+        }
+        this.recursionDepth = LOD;
+        
         float genX = 128 * CoordinateLookup.XFromUV(worldX, worldZ);
         float genZ = 128 * CoordinateLookup.ZFromUV(worldX, worldZ);
 
+
+        //new Vector3(genX, 0, genZ)
         GenerateMeshes(worldX, worldZ);
-        GameObject lower = Generator.GenerateObject(lowerMesh, new Vector3(genX, 0, genZ));
+        GameObject lower = Generator.GenerateObject(lowerMesh);
         lower.transform.localScale = 128 * Vector3.one;
         lower.name = "Lower x=" + worldX + " z=" + worldZ;
         GameObject upper = Generator.GenerateObject(upperMesh, new Vector3(genX, 0, genZ));
@@ -27,7 +36,7 @@ public class TerrainTile
         upper.transform.localScale = 128 * Vector3.one;
     }
 
-    private void GenerateMeshes(float worldX, float worldZ)
+    private void GenerateMeshes(int worldX, int worldZ)
     {
         float width = 1 << recursionDepth;
         float[] noise = new float[(int)((width + 1) * (width + 1))];
@@ -58,16 +67,11 @@ public class TerrainTile
         // 
         for (int z = 0; z < width; z++)
         {
-            //todo make this an equilateral triangle, not a half square
             float offset = z / width * 0.5f;
             float offsetAndHalf = (z + 1) / width * 0.5f;
 
             // todo: Factor out conditionals by being clever about the loop.
             // for now it's fine, but later this will be a relatively nice optimization.
-
-            // todo: why is there artefacting on the x=z line? 
-            // looks like we read the noise from (x/2) to x, and 0 to (x/2)
-            // instead of going from 0 to x. maybe the bottom/top half logic is wrong.
 
             for (int x = 0; x < width; x++)
             {
@@ -93,9 +97,12 @@ public class TerrainTile
                 // bottom half, left triangle
                 if (x + z + 1 <= width)
                 {
-                    lowerVertices[lowerCount + 0] = new Vector3(offset + ((x + 0) / width), noise[noiseBase], heightScale * (z + 0) / width);
-                    lowerVertices[lowerCount + 1] = new Vector3(offsetAndHalf + ((x + 0) / width), noise[noiseBase + (int)(width + 1)], heightScale * (z + 1) / width);
-                    lowerVertices[lowerCount + 2] = new Vector3(offset + ((x + 1) / width), noise[noiseBase + 1], heightScale * (z + 0) / width);
+                    //lowerVertices[lowerCount + 0] = new Vector3(offset + ((x + 0) / width), noise[noiseBase], heightScale * (z + 0) / width);
+                    //lowerVertices[lowerCount + 1] = new Vector3(offsetAndHalf + ((x + 0) / width), noise[noiseBase + (int)(width + 1)], heightScale * (z + 1) / width);
+                    //lowerVertices[lowerCount + 2] = new Vector3(offset + ((x + 1) / width), noise[noiseBase + 1], heightScale * (z + 0) / width);
+                    lowerVertices[lowerCount + 0] = GetPosition(worldX, worldZ, (x + 0) / width, (z + 0) / width, noise[noiseBase]);
+                    lowerVertices[lowerCount + 1] = GetPosition(worldX, worldZ, (x + 0) / width, (z + 1) / width, noise[noiseBase + (int)(width + 1)]);
+                    lowerVertices[lowerCount + 2] = GetPosition(worldX, worldZ, (x + 1) / width, (z + 0) / width, noise[noiseBase + 1]);
 
                     lowerTriangles[lowerCount + 0] = lowerCount + 0;
                     lowerTriangles[lowerCount + 1] = lowerCount + 1;
@@ -121,10 +128,12 @@ public class TerrainTile
                 if (x + z + 2 <= width)
                 {
 
-                    lowerVertices[lowerCount + 0] = new Vector3(offsetAndHalf + ((x + 0) / width), noise[noiseBase + (int)(width + 1)], heightScale * (z + 1) / width);
-                    lowerVertices[lowerCount + 1] = new Vector3(offset + ((x + 1) / width), noise[noiseBase + 1], heightScale * (z + 0) / width);
-                    lowerVertices[lowerCount + 2] = new Vector3(offsetAndHalf + ((x + 1) / width), noise[noiseBase + (int)width + 2], heightScale * (z + 1) / width);
-
+                    //lowerVertices[lowerCount + 0] = new Vector3(offsetAndHalf + ((x + 0) / width), noise[noiseBase + (int)(width + 1)], heightScale * (z + 1) / width);
+                    //lowerVertices[lowerCount + 1] = new Vector3(offset + ((x + 1) / width), noise[noiseBase + 1], heightScale * (z + 0) / width);
+                    //lowerVertices[lowerCount + 2] = new Vector3(offsetAndHalf + ((x + 1) / width), noise[noiseBase + (int)width + 2], heightScale * (z + 1) / width);
+                    lowerVertices[lowerCount + 0] = GetPosition(worldX, worldZ, (x + 0) / width, (z + 1) / width, noise[noiseBase + (int)(width + 1)]);
+                    lowerVertices[lowerCount + 1] = GetPosition(worldX, worldZ, (x + 1) / width, (z + 0) / width, noise[noiseBase + 1]);
+                    lowerVertices[lowerCount + 2] = GetPosition(worldX, worldZ, (x + 1) / width, (z + 1) / width, noise[noiseBase + (int)(width + 2)]);
 
                     lowerTriangles[lowerCount + 0] = lowerCount + 0;
                     lowerTriangles[lowerCount + 1] = lowerCount + 2;
@@ -150,5 +159,22 @@ public class TerrainTile
 
         lowerMesh = Generator.GenerateMesh(lowerVertices, lowerTriangles);
         upperMesh = Generator.GenerateMesh(upperVertices, upperTriangles);
+    }
+
+    private Vector3 GetPosition(int worldX, int worldZ, float xOffset, float zOffset, float noise) {
+        Vector3 v1 = GameManager.Coordinate.MeshToSphereUnnormalized(0, worldX, worldZ, 0, 2);
+        Vector3 v2 = GameManager.Coordinate.MeshToSphereUnnormalized(0, worldX, worldZ, 1, 2);
+        Vector3 v3 = GameManager.Coordinate.MeshToSphereUnnormalized(0, worldX, worldZ, 2, 2);
+
+        Vector3 baseX = xOffset * (v2 - v1);
+        Vector3 baseY = zOffset * (v3 - v1);
+
+        Vector3 toReturn = v1 + baseX + baseY;
+
+        toReturn = toReturn.normalized;
+        //toReturn = toReturn + ((noise - 0.5f) / 4f * toReturn);
+
+        //Debug.Log(toReturn);
+        return toReturn;
     }
 }

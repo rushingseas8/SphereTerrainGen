@@ -104,7 +104,7 @@ public class CoordinateLookup
     /// <param name="meshY">The mesh Y coordinate, i.e., length.</param>
     /// <param name="triangleIndex">Which triangle vertex we're in. Valid values are in {0, 1, 2}.</param>
     /// <param name="recursionDepth">Recursion depth. TODO pull this from global parameter (GameManager?).</param>
-    public Vector3 MeshToSphere(int lobe, int meshX, int meshY, int triangleIndex, int recursionDepth) 
+    public Vector3 MeshToSphereUnnormalized(int lobe, int meshX, int meshY, int triangleIndex, int recursionDepth) 
     {
         Profiler.BeginSample("MeshToSphere");
 
@@ -279,9 +279,15 @@ public class CoordinateLookup
         }
         Profiler.EndSample();
 
-        // Finally, we normalize the vector to project it to the sphere.
         Profiler.EndSample();
-        return icosahedronVector.normalized;
+
+        // Finally, we return the resulting unnormalized vector. To project it to the
+        // sphere, we merely need to normalize it (as in the method below).
+        return icosahedronVector;
+    }
+
+    public Vector3 MeshToSphere(int lobe, int meshX, int meshY, int triangleIndex, int recursionDepth) {
+        return MeshToSphereUnnormalized(lobe, meshX, meshY, triangleIndex, recursionDepth).normalized;
     }
 
     /*

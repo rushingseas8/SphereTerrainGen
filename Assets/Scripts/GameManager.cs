@@ -2,7 +2,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class GameManager : MonoBehaviour {
+public class GameManager : MonoBehaviour
+{
 
     // Singleton pattern
     private static GameManager instance;
@@ -37,7 +38,7 @@ public class GameManager : MonoBehaviour {
     /// The render distance.
     /// </summary>
     [SerializeField]
-    [Range(1, 12)]
+    [Range(1, 30)]
     private int renderDistance = 5;
     public static int RenderDistance
     {
@@ -49,6 +50,13 @@ public class GameManager : MonoBehaviour {
         set
         {
             instance.renderDistance = value;
+        }
+    }
+
+    private CoordinateLookup coordinate;
+    public static CoordinateLookup Coordinate {
+        get {
+            return instance.coordinate;
         }
     }
 
@@ -67,7 +75,6 @@ public class GameManager : MonoBehaviour {
     [Range(1, 8)]
     private int octaves;
 
-    private CoordinateLookup coordinate;
     private SquareBuffer<TerrainTile> terrainBuffer;
 
 
@@ -81,13 +88,57 @@ public class GameManager : MonoBehaviour {
         //Perlin perlin = new Perlin();
         //Debug.Log("GPU Perlin: " + perlin.GetValueShader(new Vector3(0, 0, 0)));
 
+        //// Basic LOD test
+        //for (int i = -renderDistance; i <= renderDistance; i++)
+        //{
+        //    for (int j = -renderDistance; j <= renderDistance; j++)
+        //    {
+        //        if (Mathf.Abs(i) <= 1 && Mathf.Abs(j) <= 1) {
+        //            TerrainTile tile = new TerrainTile(i, j, 7);
+        //        }
+
+        //        else if (Mathf.Abs(i) <= 3 && Mathf.Abs(j) <= 3)
+        //        {
+        //            TerrainTile tile = new TerrainTile(i, j, 6);
+        //        }
+
+        //        else if (Mathf.Abs(i) <= 6 && Mathf.Abs(j) <= 6)
+        //        {
+        //            TerrainTile tile = new TerrainTile(i, j, 5);
+        //        }
+
+        //        else if (Mathf.Abs(i) <= 10 && Mathf.Abs(j) <= 10) 
+        //        {
+        //            TerrainTile tile = new TerrainTile(i, j, 4);
+        //        }
+
+        //        //else if (Mathf.Abs(i) <= 15 && Mathf.Abs(j) <= 15)
+        //        //{
+        //        //    TerrainTile tile = new TerrainTile(i, j, 3);
+        //        //}
+
+        //        //else if (Mathf.Abs(i) <= 21 && Mathf.Abs(j) <= 21)
+        //        //{
+        //        //    TerrainTile tile = new TerrainTile(i, j, 2);
+        //        //}
+
+        //        // Below resolution level 3, it becomes obvious
+        //        else
+        //        {
+        //            TerrainTile tile = new TerrainTile(i, j, 3);
+        //        }
+        //    }
+        //}
+
+
         for (int i = -renderDistance; i <= renderDistance; i++)
         {
             for (int j = -renderDistance; j <= renderDistance; j++)
             {
-                TerrainTile tile = new TerrainTile(i, j);
+                TerrainTile tile = new TerrainTile(i, j, 3);
             }
         }
+
 
         //TerrainTile tile = new TerrainTile(0, 0);
     }
