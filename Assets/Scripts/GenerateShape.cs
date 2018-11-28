@@ -491,8 +491,8 @@ public class GenerateShape : MonoBehaviour {
         perlin.SetFrequency(1f);
         perlin.SetFractalOctaves(octaves);
         for (int i = 0; i < vertices.Length; i++) {
-            float noise = 1f + (perlin.GetPerlinFractal(vertices[i].x, vertices[i].y, vertices[i].z) - 0.5f) / 4f;
-            vertices[i] = noise * vertices[i];
+            //float noise = 1f + (perlin.GetPerlinFractal(vertices[i].x, vertices[i].y, vertices[i].z) - 0.5f) / 4f;
+            //vertices[i] = noise * vertices[i];
         }
 
         Profiler.EndSample();

@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+using UnityEngine.Profiling;
+
 /// <summary>
 /// Contains a bunch of methods used for generating Mesh objects from vertices
 /// and triangles. Also has a few methods for subdividing, with and without 
@@ -33,6 +35,39 @@ public static class Generator {
         return mesh;
     }
 
+    public static IEnumerator GenerateMeshAsync(Mesh modifiedMesh, Vector3[] vertices, int[] triangles, Vector2[] uvs = null, Vector3[] normals = null) 
+    {
+        //Profiler.BeginSample("Vertex assignment");
+        modifiedMesh.vertices = vertices;
+        //Profiler.EndSample();
+        yield return null;
+
+        //Profiler.BeginSample("Triangle assignment");
+        modifiedMesh.triangles = triangles;
+        //Profiler.EndSample();
+        yield return null;
+
+        //Profiler.BeginSample("UV assignment");
+        if (uvs != null)
+        {
+            modifiedMesh.uv = uvs;
+        }
+        //Profiler.EndSample();
+        yield return null;
+
+        //Profiler.BeginSample("Normal assignment");
+        if (normals != null)
+        {
+            modifiedMesh.normals = normals;
+        }
+        else
+        {
+            modifiedMesh.RecalculateNormals();
+        }
+        //Profiler.EndSample();
+        yield return null;
+    }
+
     /// <summary>
     /// Generates a GameObject from a given Mesh.
     /// 
@@ -53,7 +88,7 @@ public static class Generator {
         meshFilter.mesh = mesh;
         //meshRenderer.material = new Material(Shader.Find("Diffuse"));
         //meshRenderer.material = Resources.Load<Material>("Materials/Debug");
-        meshRenderer.material = Resources.Load<Material>("Materials/Grass");
+        meshRenderer.material = Resources.Load<Material>("Materials/Height");
         //meshRenderer.material = Resources.Load<Material>("Materials/GrassSeamless");
         meshCollider.sharedMesh = mesh;
 
@@ -80,7 +115,7 @@ public static class Generator {
         MeshRenderer meshRenderer = obj.AddComponent<MeshRenderer>();
 
         meshFilter.mesh = mesh;
-        meshRenderer.material = Resources.Load<Material>("Materials/Grass");
+        meshRenderer.material = Resources.Load<Material>("Materials/Height");
 
         obj.transform.position = position;
         obj.transform.rotation = rotation;
@@ -88,6 +123,39 @@ public static class Generator {
         obj.isStatic = true;
 
         return obj;
+    }
+
+    public static IEnumerator GenerateObjectAsync(GameObject stub, Mesh mesh, Vector3 position = default(Vector3), Quaternion rotation = default(Quaternion))
+    {
+        if (stub == null) yield break;
+        //Profiler.BeginSample("GameObject creation + mesh filter");
+        MeshFilter meshFilter = stub.AddComponent<MeshFilter>();
+        MeshRenderer meshRenderer = stub.AddComponent<MeshRenderer>();
+        MeshCollider meshCollider = stub.AddComponent<MeshCollider>();
+
+        if (stub == null) yield break;
+        meshFilter.mesh = mesh;
+        //Profiler.EndSample();
+        yield return null;
+
+        if (stub == null) yield break;
+        //Profiler.BeginSample("Setting material");
+        meshRenderer.material = Resources.Load<Material>("Materials/Height");
+        //Profiler.EndSample();
+        yield return null;
+
+        if (stub == null) yield break;
+        //Profiler.BeginSample("Setting collider");
+        meshCollider.sharedMesh = mesh;
+        //Profiler.EndSample();
+        yield return null;
+
+        if (stub == null) yield break;
+        //Profiler.BeginSample("Moving object");
+        stub.transform.position = position;
+        stub.transform.rotation = rotation;
+        //Profiler.EndSample();
+
     }
 
     private static int GetVertex(int i1, int i2, ref List<Vector3> vertices, ref Dictionary<uint, int> newVertices)

@@ -8,46 +8,24 @@ public class GameManager : MonoBehaviour
     // Singleton pattern
     private static GameManager instance;
 
-    public void Awake()
-    {
-        if (instance == null)
-        {
-            instance = this;
-        }
+    public static GameManager GetInstance() {
+        return instance;
     }
 
     /// <summary>
     /// The noise generator for perlin noise.
     /// </summary>
-    private static FastNoise _noise;
     public static FastNoise NoiseGenerator
     {
-        get
-        {
-            if (_noise == null)
-            {
-                _noise = new FastNoise(instance.seed);
-                _noise.SetFrequency(1f);
-                _noise.SetFractalOctaves(instance.octaves);
-            }
-            return _noise;
-        }
+        get { return instance.noise; }
     }
 
     /// <summary>
     /// The render distance.
     /// </summary>
-    [SerializeField]
-    [Range(0, 30)]
-    private int renderRadius = 5;
-    private int renderDiameter = 11;
     public static int RenderDistance
     {
-        get
-        {
-            return instance.renderRadius;
-        }
-
+        get { return instance.renderRadius; }
         set
         {
             instance.renderRadius = value;
@@ -55,40 +33,71 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    private CoordinateLookup coordinate;
     public static CoordinateLookup Coordinate {
-        get {
-            return instance.coordinate;
-        }
+        get { return instance.coordinate; }
     }
 
-    // Instance variables (tied to a GameManager instance)
+    #region Instance variables (tied to a GameManager instance)
+    private FastNoise noise;
+
+    [SerializeField]
+    [Range(0, 30)]
+    private int renderRadius = 5;
+    private int renderDiameter;
+
+    private CoordinateLookup coordinate;
 
     /// <summary>
     /// The seed used for the random number generator.
     /// </summary>
     [SerializeField]
-    private int seed;
+    private int seed = 0;
 
     /// <summary>
     /// How many octaves we use for the perlin noise.
     /// </summary>
     [SerializeField]
     [Range(1, 8)]
-    private int octaves;
+    private int octaves = 5;
 
     public static TerrainBuffer terrainBuffer;
 
     public static int XChunk { get; set; }
     public static int ZChunk { get; set; }
 
-	// Use this for initialization
-	void Start () {
+    #endregion
+
+
+    public void Awake()
+    {
+        if (instance == null)
+        {
+            instance = this;
+        }
+        else
+        {
+            Debug.Log("Extra GameManager found on object.");
+
+            #if UNITY_EDITOR
+            UnityEditor.EditorGUIUtility.PingObject(gameObject);
+            #endif
+        }
+    }
+
+    // Use this for initialization
+    void Start () {
+
+        noise = new FastNoise(seed);
+        noise.SetFrequency(1f);
+        noise.SetFractalOctaves(octaves);
+
+        renderDiameter = (2 * renderRadius) + 1;
+
         coordinate = new CoordinateLookup();
         terrainBuffer = new TerrainBuffer(renderDiameter);
 
-        XChunk = RenderDistance;
-        ZChunk = RenderDistance;
+        XChunk = -RenderDistance;
+        ZChunk = -RenderDistance;
 
         //Debug.LogError("Sphere lookup: " + coordinate.MeshToSphere(coordinate.GetMeshCoordinate(0, 0, 8, 0), 2));
 

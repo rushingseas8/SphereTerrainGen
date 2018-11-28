@@ -19,10 +19,14 @@ public class Controller : MonoBehaviour {
 
     private float thirdPersonDistance = 0;
 
-    public bool flyingMode = true;
+    [SerializeField]
+    private bool flyingMode = true;
 
-    private static float movementScale = 3f;
-    private static float rotationScale = 5f;
+    [SerializeField]
+    private float movementScale = 3f;
+
+    [SerializeField]
+    private float rotationScale = 5f;
 
     // Use this for initialization
     void Start () {
@@ -43,8 +47,6 @@ public class Controller : MonoBehaviour {
         else
             movementScale = 0.2f;*/
     }
-
-    bool flag = true;
 
     bool keycodePressed(KeyCode[] arr) {
         for(int i = 0; i < arr.Length; i++) {
@@ -170,17 +172,17 @@ public class Controller : MonoBehaviour {
         mainCamera.transform.rotation = newRotation;
 
         // Terrain stuff
-        // TODO make the chunks calculate using einstein bonudaries, not cartesian.
-        // TODO fix the initial chunk offset. Right now it thinks 0 is the bottom-left; we spawn in chunk 11,11 or something.
 
-        // Because the chunks are using x and z normally, we flip them here.
-        int newXChunk = (int)((transform.position.x) / 128) - GameManager.RenderDistance;
-        int newZChunk = (int)((transform.position.z) / 128) - GameManager.RenderDistance;
+        // Calculate the current X and Z chunks.
+        int newXChunk = (int)CoordinateLookup.UFromXZ(transform.position.x / 128, transform.position.z / 128) - GameManager.RenderDistance;
+        int newZChunk = (int)CoordinateLookup.VFromXZ(transform.position.x / 128, transform.position.z / 128) - GameManager.RenderDistance;
 
         Direction movementDir = Direction.NONE;
 
+        // Based on the difference between the current and new chunks, shift.
         if (newXChunk < GameManager.XChunk)
         {
+            Debug.Log(GameManager.XChunk + " and new: " + newXChunk);
             GameManager.XChunk = newXChunk;
             movementDir = Direction.LEFT;
         }
