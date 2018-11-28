@@ -5,7 +5,7 @@ using UnityEngine;
 public class SquareBuffer<T> 
 {
     // The diameter of the square buffer; i.e., its side length.
-    private readonly int size;
+    protected readonly int size;
 
     // The internal buffer we use to keep track of objects.
     private readonly T[,] square;
@@ -23,7 +23,7 @@ public class SquareBuffer<T>
 
         for (int enumCount = 0; enumCount < 4; enumCount++)
         {
-            faceIndices[enumCount] = new int[size * size];
+            faceIndices[enumCount] = new int[size];
             int count = 0;
             for (int i = 0; i < size; i++)
             {
@@ -74,24 +74,40 @@ public class SquareBuffer<T>
     /// Delete the specified face.
     /// </summary>
     /// <param name="face">Face.</param>
-    public void Delete(Direction face)
+    protected void Delete(Direction face)
     {
         //Debug.Log ("Deleting " + face);
 
         int[] indices = faceIndices[(int)face];
         for (int i = 0; i < indices.Length; i++)
         {
+            // Grab the index
             Vector2Int pos = IndexToCoords(size, indices[i]);
 
-            if (typeof(GameObject) == typeof(T))
-            {
-                (square[pos.x, pos.y] as GameObject).SetActive(false);
-            }
+            // Delete the object using its callback
+            OnDelete(pos.x, pos.y, square[pos.x, pos.y]);
 
+            // Set the value to the default. Null for reference types,
+            // and the closest thing to a zero for value types.
             square[pos.x, pos.y] = default(T);
         }
     }
 
+    /// <summary>
+    /// Callback for when an object in the buffer is deleted.
+    /// Use this callback for e.g. setting a GameObject to inactive, saving
+    /// chunks to disk, etc. By default this tries to work with GameObjects.
+    /// </summary>
+    /// <param name="x">The x coordinate.</param>
+    /// <param name="y">The y coordinate.</param>
+    /// <param name="deleted">Deleted.</param>
+    protected virtual void OnDelete(int x, int y, T deleted)
+    {
+        if (typeof(GameObject) == typeof(T))
+        {
+            (deleted as GameObject).SetActive(false);
+        }
+    }
 
     /// <summary>
     /// Moves the cube one unit in the provided direction.
@@ -100,7 +116,7 @@ public class SquareBuffer<T>
     /// shift RIGHT. 
     /// </summary>
     /// <param name="dir">The direction to shift in.</param>
-    public void Shift(Direction dir)
+    public void Shift(Direction face)
     {
         int xStart = 0;
         int xEnd = size;
@@ -113,7 +129,7 @@ public class SquareBuffer<T>
         int yAmount = 0;
 
         // Set up the parameters of shifting
-        switch (dir)
+        switch (face)
         {
             case Direction.LEFT:
                 Delete(Direction.RIGHT);
@@ -155,7 +171,41 @@ public class SquareBuffer<T>
             for (int y = yStart; y != yEnd; y += yDelta)
             {
                 square[x, y] = square[x + xAmount, y + yAmount];
+                OnShift(x, y, square[x, y]);
             }
         }
+
+        // Regenerate the other side, if needed.
+
+        int[] indices = faceIndices[(int)face];
+        Debug.Log("Generating " + indices.Length + " new terrain.");
+        for (int i = 0; i < indices.Length; i++)
+        {
+            Vector2Int pos = IndexToCoords(size, indices[i]);
+            square[pos.x, pos.y] = Generate(pos.x, pos.y);
+        }
+    }
+
+    /// <summary>
+    /// Called when the object is shifted. The index returned is the new one;
+    /// the object returned is the one at the new index.
+    /// </summary>
+    /// <param name="x">The x coordinate.</param>
+    /// <param name="y">The y coordinate.</param>
+    /// <param name="shifted">Shifted object.</param>
+    protected virtual void OnShift(int x, int y, T shifted)
+    {
+        // Do nothing by default.
+    }
+
+    /// <summary>
+    /// Generate a new object at the specified index.
+    /// </summary>
+    /// <param name="x">The x coordinate.</param>
+    /// <param name="y">The y coordinate.</param>
+    protected virtual T Generate(int x, int y)
+    {
+        // Do the null or zero value by default.
+        return default(T);
     }
 }

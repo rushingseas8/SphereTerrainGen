@@ -38,18 +38,20 @@ public class GameManager : MonoBehaviour
     /// The render distance.
     /// </summary>
     [SerializeField]
-    [Range(1, 30)]
-    private int renderDistance = 5;
+    [Range(0, 30)]
+    private int renderRadius = 5;
+    private int renderDiameter = 11;
     public static int RenderDistance
     {
         get
         {
-            return instance.renderDistance;
+            return instance.renderRadius;
         }
 
         set
         {
-            instance.renderDistance = value;
+            instance.renderRadius = value;
+            instance.renderDiameter = (2 * instance.renderRadius) + 1;
         }
     }
 
@@ -75,13 +77,18 @@ public class GameManager : MonoBehaviour
     [Range(1, 8)]
     private int octaves;
 
-    private SquareBuffer<TerrainTile> terrainBuffer;
+    public static TerrainBuffer terrainBuffer;
 
+    public static int XChunk { get; set; }
+    public static int ZChunk { get; set; }
 
 	// Use this for initialization
 	void Start () {
         coordinate = new CoordinateLookup();
-        //terrainBuffer = new SquareBuffer<TerrainTile>(renderDistance);
+        terrainBuffer = new TerrainBuffer(renderDiameter);
+
+        XChunk = RenderDistance;
+        ZChunk = RenderDistance;
 
         //Debug.LogError("Sphere lookup: " + coordinate.MeshToSphere(coordinate.GetMeshCoordinate(0, 0, 8, 0), 2));
 
@@ -130,12 +137,11 @@ public class GameManager : MonoBehaviour
         //    }
         //}
 
-
-        for (int i = -renderDistance; i <= renderDistance; i++)
+        for (int i = -renderRadius; i <= renderRadius; i++)
         {
-            for (int j = -renderDistance; j <= renderDistance; j++)
+            for (int j = -renderRadius; j <= renderRadius; j++)
             {
-                TerrainTile tile = new TerrainTile(i, j, 3);
+                terrainBuffer[i + renderRadius, j + renderRadius] = new TerrainTile(i, j, 3);
             }
         }
 

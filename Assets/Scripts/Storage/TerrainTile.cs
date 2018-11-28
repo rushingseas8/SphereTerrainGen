@@ -1,6 +1,8 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Profiling;
+
 
 /// <summary>
 /// Storage for a single generation tile in memory. In short, this is a rhombus
@@ -10,6 +12,9 @@ public class TerrainTile
 {
     private Mesh lowerMesh;
     private Mesh upperMesh;
+
+    private GameObject lower;
+    private GameObject upper;
 
     //private const int recursionDepth = 7;
     private int recursionDepth;
@@ -28,16 +33,25 @@ public class TerrainTile
 
         //new Vector3(genX, 0, genZ)
         GenerateMeshes(worldX, worldZ);
-        GameObject lower = Generator.GenerateObject(lowerMesh);
+
+        lower = Generator.GenerateObject(lowerMesh, new Vector3(genX, 0, genZ));
         lower.transform.localScale = 128 * Vector3.one;
         lower.name = "Lower x=" + worldX + " z=" + worldZ;
-        GameObject upper = Generator.GenerateObject(upperMesh, new Vector3(genX, 0, genZ));
+
+        upper = Generator.GenerateObject(upperMesh, new Vector3(genX, 0, genZ));
         upper.name = "Upper x=" + worldX + " z=" + worldZ;
         upper.transform.localScale = 128 * Vector3.one;
     }
 
+    public void Destroy()
+    {
+        GameObject.Destroy(lower);
+        GameObject.Destroy(upper);
+    }
+
     private void GenerateMeshes(int worldX, int worldZ)
     {
+        Profiler.BeginSample("Perlin noise generation");
         float width = 1 << recursionDepth;
         float[] noise = new float[(int)((width + 1) * (width + 1))];
 
@@ -53,7 +67,9 @@ public class TerrainTile
                 //noise[(int)((i * (width + 1)) + j)] = j / width;
             }
         }
+        Profiler.EndSample();
 
+        Profiler.BeginSample("Vertex and triangle generation");
         Vector3[] upperVertices = new Vector3[(int)(3 * width * width)];
         int[] upperTriangles = new int[(int)(3 * width * width)];
 
@@ -65,6 +81,7 @@ public class TerrainTile
 
         //Debug.Log("Max size: " + upperVertices.Length);
         // 
+        float heightScale = Mathf.Sqrt(3) / 2f;
         for (int z = 0; z < width; z++)
         {
             float offset = z / width * 0.5f;
@@ -75,34 +92,14 @@ public class TerrainTile
 
             for (int x = 0; x < width; x++)
             {
-                float heightScale = Mathf.Sqrt(3) / 2f;
-                //int baseIndex = 6 * (int)((i * width) + j);
                 int noiseBase = (int)((z * (width + 1)) + x);
 
-                //int baseIndex = count;
-                //Debug.Log(baseIndex);
-                //Debug.Log(lowerCount + ", upper: " + upperCount + " sum: " + (lowerCount + upperCount));
-
-                // on boundary between meshes; special case
-                //if (i + (width - j) >= width)
-                //{
-                //continue;
-                //}
-
-                //vertices[(4 * baseIndex) + 0] = new Vector3(i / width, noise[baseIndex], j / width);
-                //vertices[(4 * baseIndex) + 1] = new Vector3((i+1) / width, noise[baseIndex + (int)width], j / width);
-                //vertices[(4 * baseIndex) + 2] = new Vector3(i / width, noise[baseIndex + 1], (j+1) / width);
-                //vertices[(4 * baseIndex) + 3] = new Vector3((i+1) / width, noise[baseIndex + (int)width + 1], (j+1) / width);
-
                 // bottom half, left triangle
-                if (x + z + 1 <= width)
+                if (x + z < width)
                 {
-                    //lowerVertices[lowerCount + 0] = new Vector3(offset + ((x + 0) / width), noise[noiseBase], heightScale * (z + 0) / width);
-                    //lowerVertices[lowerCount + 1] = new Vector3(offsetAndHalf + ((x + 0) / width), noise[noiseBase + (int)(width + 1)], heightScale * (z + 1) / width);
-                    //lowerVertices[lowerCount + 2] = new Vector3(offset + ((x + 1) / width), noise[noiseBase + 1], heightScale * (z + 0) / width);
-                    lowerVertices[lowerCount + 0] = GetPosition(worldX, worldZ, (x + 0) / width, (z + 0) / width, noise[noiseBase]);
-                    lowerVertices[lowerCount + 1] = GetPosition(worldX, worldZ, (x + 0) / width, (z + 1) / width, noise[noiseBase + (int)(width + 1)]);
-                    lowerVertices[lowerCount + 2] = GetPosition(worldX, worldZ, (x + 1) / width, (z + 0) / width, noise[noiseBase + 1]);
+                    lowerVertices[lowerCount + 0] = new Vector3(offset + ((x + 0) / width), noise[noiseBase], heightScale * (z + 0) / width);
+                    lowerVertices[lowerCount + 1] = new Vector3(offsetAndHalf + ((x + 0) / width), noise[noiseBase + (int)(width + 1)], heightScale * (z + 1) / width);
+                    lowerVertices[lowerCount + 2] = new Vector3(offset + ((x + 1) / width), noise[noiseBase + 1], heightScale * (z + 0) / width);
 
                     lowerTriangles[lowerCount + 0] = lowerCount + 0;
                     lowerTriangles[lowerCount + 1] = lowerCount + 1;
@@ -125,15 +122,12 @@ public class TerrainTile
                 }
 
                 // bottom half, right triangle. This triangle has flipped indices.
-                if (x + z + 2 <= width)
+                if (x + z < width - 1)
                 {
 
-                    //lowerVertices[lowerCount + 0] = new Vector3(offsetAndHalf + ((x + 0) / width), noise[noiseBase + (int)(width + 1)], heightScale * (z + 1) / width);
-                    //lowerVertices[lowerCount + 1] = new Vector3(offset + ((x + 1) / width), noise[noiseBase + 1], heightScale * (z + 0) / width);
-                    //lowerVertices[lowerCount + 2] = new Vector3(offsetAndHalf + ((x + 1) / width), noise[noiseBase + (int)width + 2], heightScale * (z + 1) / width);
-                    lowerVertices[lowerCount + 0] = GetPosition(worldX, worldZ, (x + 0) / width, (z + 1) / width, noise[noiseBase + (int)(width + 1)]);
-                    lowerVertices[lowerCount + 1] = GetPosition(worldX, worldZ, (x + 1) / width, (z + 0) / width, noise[noiseBase + 1]);
-                    lowerVertices[lowerCount + 2] = GetPosition(worldX, worldZ, (x + 1) / width, (z + 1) / width, noise[noiseBase + (int)(width + 2)]);
+                    lowerVertices[lowerCount + 0] = new Vector3(offsetAndHalf + ((x + 0) / width), noise[noiseBase + (int)(width + 1)], heightScale * (z + 1) / width);
+                    lowerVertices[lowerCount + 1] = new Vector3(offset + ((x + 1) / width), noise[noiseBase + 1], heightScale * (z + 0) / width);
+                    lowerVertices[lowerCount + 2] = new Vector3(offsetAndHalf + ((x + 1) / width), noise[noiseBase + (int)width + 2], heightScale * (z + 1) / width);
 
                     lowerTriangles[lowerCount + 0] = lowerCount + 0;
                     lowerTriangles[lowerCount + 1] = lowerCount + 2;
@@ -156,9 +150,12 @@ public class TerrainTile
                 }
             }
         }
+        Profiler.EndSample();
 
+        Profiler.BeginSample("Mesh generation");
         lowerMesh = Generator.GenerateMesh(lowerVertices, lowerTriangles);
         upperMesh = Generator.GenerateMesh(upperVertices, upperTriangles);
+        Profiler.EndSample();
     }
 
     private Vector3 GetPosition(int worldX, int worldZ, float xOffset, float zOffset, float noise) {

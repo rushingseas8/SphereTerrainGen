@@ -74,6 +74,7 @@
     <Compile Include="Assets\Scripts\Storage\CubeBuffer.cs" />
     <Compile Include="Assets\Scripts\Storage\Direction.cs" />
     <Compile Include="Assets\Scripts\Storage\SquareBuffer.cs" />
+    <Compile Include="Assets\Scripts\Storage\TerrainBuffer.cs" />
     <Compile Include="Assets\Scripts\Storage\TerrainTile.cs" />
     <None Include="Assets\Shaders\Perlin.compute" />
     <None Include="Assets\Shaders\TextureArrayShader.shader" />
