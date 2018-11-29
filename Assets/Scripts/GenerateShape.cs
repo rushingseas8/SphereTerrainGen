@@ -529,6 +529,11 @@ public class GenerateShape : MonoBehaviour {
         }
         Profiler.EndSample();
 
+        // Making the data structure
+        Profiler.BeginSample("Making data structure");
+        IcosphereStorage storage = new IcosphereStorage(vertices, triangles);
+        Profiler.EndSample();
+
         Profiler.BeginSample("Assigning values to mesh");
         mesh.vertices = vertices;
         mesh.triangles = triangles;
